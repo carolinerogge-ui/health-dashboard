@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Health Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; color: #1a1a1a; padding: 1.5rem; }
+  h1 { font-size: 16px; font-weight: 600; color: #111; }
+  .header-row { display: flex; align-items: center; gap: 12px; margin-bottom: 1.2rem; flex-wrap: wrap; }
+  .updated { font-size: 10px; color: #aaa; }
+  .refresh-btn { font-size: 11px; padding: 3px 10px; border-radius: 6px; border: 1px solid #ddd; background: #f5f5f5; color: #444; cursor: pointer; }
+  .refresh-btn:hover { background: #eee; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+  .status-dot.live { background: #639922; }
+  .status-dot.error { background: #E24B4A; }
+  .status-dot.loading { background: #BA7517; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .status-text { font-size: 10px; color: #888; }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.2rem; }
+  .metric { background: #f5f5f5; border-radius: 8px; padding: 0.6rem 0.8rem; }
+  .metric-label { font-size: 10px; color: #666; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .metric-val { font-size: 20px; font-weight: 500; }
+  .metric-val.red { color: #E24B4A; }
+  .metric-val.amber { color: #BA7517; }
+  .filters { display: flex; gap: 6px; margin-bottom: 0.8rem; flex-wrap: wrap; align-items: center; }
+  .filters label { font-size: 11px; color: #666; }
+  .filters select, .filters input { font-size: 11px; padding: 3px 6px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #1a1a1a; }
+  .filters input { width: 140px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th { text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: #888; padding: 5px 7px; border-bottom: 1px solid #eee; cursor: pointer; white-space: nowrap; user-select: none; }
+  thead th:hover { color: #333; }
+  thead th.sorted { color: #1a1a1a; }
+  tbody tr { border-bottom: 1px solid #f0f0f0; }
+  tbody tr:hover { background: #fafafa; }
+  tbody tr.unassigned { background: #fffbf2; }
+  tbody tr.unassigned:hover { background: #fff5e0; }
+  td { padding: 6px 7px; vertical-align: middle; }
+  .badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 99px; font-size: 10px; font-weight: 500; }
+  .badge-high   { background: #EAF3DE; color: #3B6D11; }
+  .badge-medium { background: #FAEEDA; color: #854F0B; }
+  .badge-low    { background: #FCEBEB; color: #A32D2D; }
+  .badge-none   { background: #f0f0f0; color: #888; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .dot-high   { background: #639922; }
+  .dot-medium { background: #BA7517; }
+  .dot-low    { background: #E24B4A; }
+  .days-stale { color: #E24B4A; font-weight: 500; }
+  .days-ok    { color: #639922; }
+  .days-warn  { color: #BA7517; }
+  .days-none  { color: #aaa; font-style: italic; }
+  .end-urgent { color: #E24B4A; font-weight: 500; }
+  .end-soon   { color: #BA7517; font-weight: 500; }
+  .end-ok     { color: #888; }
+  .end-past   { color: #aaa; font-style: italic; }
+  .region-tag { font-size: 10px; color: #666; background: #f0f0f0; padding: 1px 5px; border-radius: 4px; }
+  .no-csm-tag { font-size: 10px; color: #854F0B; background: #FAEEDA; padding: 1px 5px; border-radius: 4px; }
+  .no-results { text-align: center; padding: 2rem; color: #999; font-size: 13px; }
+  .loading-overlay { text-align: center; padding: 3rem; color: #999; font-size: 13px; }
+  .error-banner { background: #FCEBEB; border: 1px solid #f5c6c6; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 12px; color: #A32D2D; display: none; }
+</style>
+</head>
+<body>
+
+<div class="header-row">
+  <h1>Customer Health Dashboard</h1>
+  <span class="status-dot loading" id="statusDot"></span>
+  <span class="status-text" id="statusText">Loading…</span>
+  <button class="refresh-btn" onclick="fetchData()">↻ Refresh</button>
+  <span class="updated" id="lastUpdated"></span>
+</div>
+
+<div class="error-banner" id="errorBanner"></div>
+<div class="metrics" id="metrics"></div>
+
+<div class="filters">
+  <label>Health:</label>
+  <select id="fHealth">
+    <option value="">All</option>
+    <option value="High">High</option>
+    <option value="Medium">Medium</option>
+    <option value="Low">Low</option>
+    <option value="None">No score</option>
+  </select>
+  <label>Region:</label>
+  <select id="fRegion"><option value="">All</option></select>
+  <label>CSM:</label>
+  <select id="fCsm">
+    <option value="">All</option>
+    <option value="__none__">No CSM</option>
+  </select>
+  <label>Contact:</label>
+  <select id="fContact">
+    <option value="">All</option>
+    <option value="overdue">Overdue (90+ days)</option>
+    <option value="warn">Due soon (30–90 days)</option>
+    <option value="ok">Recent (&lt; 30 days)</option>
+    <option value="none">Never recorded</option>
+  </select>
+  <label>Contract End:</label>
+  <select id="fEnd">
+    <option value="">All</option>
+    <option value="past">Past</option>
+    <option value="urgent">Within 30 days</option>
+    <option value="soon">Within 90 days</option>
+  </select>
+  <input type="text" id="fSearch" placeholder="Search account…" />
+</div>
+
+<div style="overflow-x:auto;">
+  <table>
+    <thead>
+      <tr>
+        <th onclick="sortBy('account')">Account <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('csm')">CSM <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('region')">Region <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('health')">Health <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('lastContact')">Last Contact <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('daysSince')">Days Since <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('daysToContractEnd')">Days To Contract End <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('nextInvRenewal')">Next Inv. Renewal <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('contractEnd')">Contract End <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('contractValue')">Value (USD) <span style="opacity:.4;">↕</span></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"><tr><td colspan="10" class="loading-overlay">Fetching data…</td></tr></tbody>
+  </table>
+  <div id="no-results" class="no-results" style="display:none;">No accounts match your filters.</div>
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQuX9kAb12qQ1n7pPFJQjvHZKggE-KNwwOPdqIFv_ddIOTBuMTsy49k2TykWWrKKBiRB2OmALs27j40/pub?gid=309829125&single=true&output=csv';
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // auto-refresh every 5 minutes
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+let allData = [];
+let sortCol = 'daysToContractEnd', sortDir = 1;
+
+// ─── DATE HELPERS ──────────────────────────────────────────────────────────
+function today() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+
+// Parse dd/mm/yyyy OR yyyy-mm-dd OR Excel serial
+function parseDate(s) {
+  if (!s || s.trim() === '' || s.trim() === 'Past') return null;
+  s = s.trim();
+  // Excel serial number
+  if (/^\d{4,5}$/.test(s)) {
+    const serial = parseInt(s);
+    const d = new Date((serial - 25569) * 86400000);
+    return isNaN(d) ? null : d;
+  }
+  // dd/mm/yyyy
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
+    const [d,m,y] = s.split('/');
+    return new Date(+y, +m-1, +d);
+  }
+  // yyyy-mm-dd
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    return new Date(s.split('T')[0]);
+  }
+  return null;
+}
+
+function fmtDate(d) {
+  if (!d) return null;
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function daysSince(d) { if (!d) return null; return Math.floor((today() - d) / 86400000); }
+function daysTo(d)    { if (!d) return null; return Math.floor((d - today()) / 86400000); }
+
+function contactClass(n) {
+  if (n === null) return 'days-none';
+  if (n >= 90) return 'days-stale';
+  if (n >= 30) return 'days-warn';
+  return 'days-ok';
+}
+
+function endClass(n) {
+  if (n === null) return '';
+  if (n < 0)   return 'end-past';
+  if (n <= 30) return 'end-urgent';
+  if (n <= 90) return 'end-soon';
+  return 'end-ok';
+}
+
+function healthOrder(h) { return h==='Low'?0:h==='Medium'?1:h==='High'?2:-1; }
+
+// ─── CSV PARSER ────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = splitCSVLine(lines[0]).map(h => h.trim().replace(/^"|"$/g,''));
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = splitCSVLine(lines[i]).map(v => v.trim().replace(/^"|"$/g,'').replace(/""/g,'"'));
+    if (vals.every(v => !v)) continue;
+    const obj = {};
+    headers.forEach((h, idx) => obj[h] = vals[idx] || '');
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function splitCSVLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+// ─── MAP CSV ROW → dashboard record ───────────────────────────────────────
+// Customer Health sheet columns (gid=309829125):
+// CSM ID, Account PM/CSM, Account Name, Date of last contact,
+// Contract End Date, Account Region, Customer Health (emoji), Customer Health1 (text),
+// Adoption, Engagement, Support Health, Renewal Risk, Overall Status
+function mapRow(row) {
+  const account     = row['Account: Account Name'] || row['Account Name'] || '';
+  const csm         = row['Account PM/CSM'] || '';
+  const region      = row['Account Region'] || '';
+  const healthRaw   = (row['Customer Health1'] || row['Customer Health'] || '').trim();
+  const health      = healthRaw.replace(/[^a-zA-Z]/g,'') || null; // strip emoji -> "High","Medium","Low"
+  const lastContactRaw = row['Date of last contact'] || '';
+  const contractEndRaw = row['Contract End Date'] || '';
+
+  const lastContact = parseDate(lastContactRaw);
+  const contractEnd = parseDate(contractEndRaw);
+
+  if (!account) return null;
+
+  return {
+    account,
+    csm:          csm || null,
+    region:       region || null,
+    health:       health || null,
+    lastContact,
+    contractEnd,
+    nextInvRenewal: null, // not in Customer Health sheet — will enrich below if available
+    contractValue: 0,
+  };
+}
+
+// ─── FETCH & PARSE ─────────────────────────────────────────────────────────
+async function fetchData() {
+  setStatus('loading', 'Refreshing…');
+  document.getElementById('errorBanner').style.display = 'none';
+
+  try {
+    const resp = await fetch(CSV_URL + '&t=' + Date.now());
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text = await resp.text();
+    const rows = parseCSV(text);
+
+    // Find the header row — the sheet has a non-data first row in some exports
+    // Filter to rows that have an account name
+    const mapped = rows.map(mapRow).filter(Boolean);
+
+    if (mapped.length === 0) throw new Error('No data rows found — check sheet is published correctly');
+
+    allData = mapped;
+    repopulateSelects();
+    render();
+
+    const now = new Date();
+    document.getElementById('lastUpdated').textContent =
+      `Last updated ${now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+    setStatus('live', `${allData.length} accounts`);
+
+  } catch (err) {
+    setStatus('error', 'Failed to load');
+    const banner = document.getElementById('errorBanner');
+    banner.style.display = '';
+    banner.textContent = `⚠ Could not load data: ${err.message}. Check the sheet is published (File → Share → Publish to web).`;
+  }
+}
+
+function setStatus(state, text) {
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot ' + state;
+  document.getElementById('statusText').textContent = text;
+}
+
+// ─── FILTERS & SORT ────────────────────────────────────────────────────────
+function sortBy(col) {
+  if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = 1; }
+  render();
+}
+
+function getFiltered() {
+  const health  = document.getElementById('fHealth').value;
+  const region  = document.getElementById('fRegion').value;
+  const csm     = document.getElementById('fCsm').value;
+  const contact = document.getElementById('fContact').value;
+  const end     = document.getElementById('fEnd').value;
+  const search  = document.getElementById('fSearch').value.toLowerCase();
+
+  return allData.filter(r => {
+    if (health === 'None' && r.health) return false;
+    if (health && health !== 'None' && r.health !== health) return false;
+    if (region && (r.region || '') !== region) return false;
+    if (csm === '__none__' && r.csm) return false;
+    else if (csm && csm !== '__none__' && r.csm !== csm) return false;
+
+    const ds = daysSince(r.lastContact);
+    if (contact === 'overdue' && !(ds !== null && ds >= 90)) return false;
+    if (contact === 'warn'    && !(ds !== null && ds >= 30 && ds < 90)) return false;
+    if (contact === 'ok'      && !(ds !== null && ds < 30)) return false;
+    if (contact === 'none'    && ds !== null) return false;
+
+    const dt = daysTo(r.contractEnd);
+    if (end === 'past'   && !(dt !== null && dt < 0)) return false;
+    if (end === 'urgent' && !(dt !== null && dt >= 0 && dt <= 30)) return false;
+    if (end === 'soon'   && !(dt !== null && dt >= 0 && dt <= 90)) return false;
+
+    if (search && !r.account.toLowerCase().includes(search)) return false;
+    return true;
+  }).sort((a, b) => {
+    let av, bv;
+    if      (sortCol === 'health')           { av = healthOrder(a.health); bv = healthOrder(b.health); }
+    else if (sortCol === 'daysSince')        { av = daysSince(a.lastContact) ?? 9999; bv = daysSince(b.lastContact) ?? 9999; }
+    else if (sortCol === 'daysToContractEnd'){ av = daysTo(a.contractEnd) ?? 9999;    bv = daysTo(b.contractEnd) ?? 9999; }
+    else if (sortCol === 'contractEnd')      { av = a.contractEnd || new Date(9999,0); bv = b.contractEnd || new Date(9999,0); }
+    else if (sortCol === 'nextInvRenewal')   { av = a.nextInvRenewal || new Date(9999,0); bv = b.nextInvRenewal || new Date(9999,0); }
+    else if (sortCol === 'lastContact')      { av = a.lastContact || new Date(0); bv = b.lastContact || new Date(0); }
+    else if (sortCol === 'contractValue')    { av = a.contractValue; bv = b.contractValue; }
+    else { av = (a[sortCol] || '').toLowerCase(); bv = (b[sortCol] || '').toLowerCase(); }
+    return av < bv ? -sortDir : av > bv ? sortDir : 0;
+  });
+}
+
+// ─── RENDER ────────────────────────────────────────────────────────────────
+function renderMetrics(data) {
+  const endingSoon = data.filter(r => { const d = daysTo(r.contractEnd); return d !== null && d >= 0 && d <= 90; }).length;
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Total Accounts</div><div class="metric-val">${data.length}</div></div>
+    <div class="metric"><div class="metric-label">No CSM Assigned</div><div class="metric-val amber">${data.filter(r => !r.csm).length}</div></div>
+    <div class="metric"><div class="metric-label">Low Health</div><div class="metric-val red">${data.filter(r => r.health === 'Low').length}</div></div>
+    <div class="metric"><div class="metric-label">Contract End ≤90 Days</div><div class="metric-val amber">${endingSoon}</div></div>`;
+}
+
+function render() {
+  const data = getFiltered();
+  renderMetrics(data);
+  const noRes = document.getElementById('no-results');
+  if (!data.length) {
+    document.getElementById('tbody').innerHTML = '';
+    noRes.style.display = '';
+    return;
+  }
+  noRes.style.display = 'none';
+
+  document.getElementById('tbody').innerHTML = data.map(r => {
+    const ds = daysSince(r.lastContact);
+    const dt = daysTo(r.contractEnd);
+    const ec = endClass(dt);
+    const cc = contactClass(ds);
+
+    const hb = r.health === 'High'   ? `<span class="badge badge-high"><span class="dot dot-high"></span>High</span>`
+             : r.health === 'Medium' ? `<span class="badge badge-medium"><span class="dot dot-medium"></span>Medium</span>`
+             : r.health === 'Low'    ? `<span class="badge badge-low"><span class="dot dot-low"></span>Low</span>`
+             : `<span class="badge badge-none">—</span>`;
+
+    const short = r.account.length > 32 ? r.account.slice(0,30) + '…' : r.account;
+
+    const dtCell = dt === null ? '<span style="color:#bbb;">—</span>'
+                 : dt < 0     ? `<span class="${ec}">${Math.abs(dt)}d overdue</span>`
+                 : `<span class="${ec}">${dt}d</span>`;
+
+    const invCell = r.nextInvRenewal
+      ? `<span style="font-size:11px;color:#888;">${fmtDate(r.nextInvRenewal)}</span>`
+      : '<span style="color:#bbb;">—</span>';
+
+    const endCell = r.contractEnd
+      ? `<span class="${ec}" style="font-size:11px;">${fmtDate(r.contractEnd)}</span>`
+      : '<span style="color:#bbb;">—</span>';
+
+    return `<tr class="${!r.csm ? 'unassigned' : ''}">
+      <td title="${r.account}" style="max-width:195px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${short}</td>
+      <td style="white-space:nowrap;font-size:11px;">${r.csm || '<span class="no-csm-tag">Unassigned</span>'}</td>
+      <td>${r.region ? `<span class="region-tag">${r.region}</span>` : '<span style="color:#bbb;">—</span>'}</td>
+      <td>${hb}</td>
+      <td style="white-space:nowrap;color:#888;font-size:11px;">${r.lastContact ? fmtDate(r.lastContact) : '<span style="font-style:italic;color:#bbb;">—</span>'}</td>
+      <td style="font-size:11px;">${ds === null ? '<span class="days-none">—</span>' : `<span class="${cc}">${ds}d ago</span>`}</td>
+      <td style="font-size:11px;">${dtCell}</td>
+      <td>${invCell}</td>
+      <td>${endCell}</td>
+      <td style="white-space:nowrap;font-size:11px;color:#888;">${r.contractValue ? '$' + r.contractValue.toLocaleString() : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function repopulateSelects() {
+  const regions = [...new Set(allData.map(r => r.region).filter(Boolean))].sort();
+  const csms    = [...new Set(allData.map(r => r.csm).filter(Boolean))].sort();
+
+  const rSel = document.getElementById('fRegion');
+  const cSel = document.getElementById('fCsm');
+  const rVal = rSel.value, cVal = cSel.value;
+
+  rSel.innerHTML = '<option value="">All</option>';
+  cSel.innerHTML = '<option value="">All</option><option value="__none__">No CSM</option>';
+
+  regions.forEach(r => { const o = document.createElement('option'); o.value = r; o.textContent = r; rSel.appendChild(o); });
+  csms.forEach(c    => { const o = document.createElement('option'); o.value = c; o.textContent = c; cSel.appendChild(o); });
+
+  rSel.value = rVal; cSel.value = cVal;
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+['fHealth','fRegion','fCsm','fContact','fEnd','fSearch'].forEach(id =>
+  document.getElementById(id).addEventListener('input', render)
+);
+
+fetchData();
+setInterval(fetchData, REFRESH_INTERVAL_MS);
+</script>
+</body>
+</html>
