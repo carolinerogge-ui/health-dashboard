@@ -1,367 +1,374 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Contract Renewal Pipeline</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Customer Health Dashboard</title>
 <style>
-  :root {
-    --bg: #0f0f0f;
-    --surface: #161616;
-    --surface2: #1e1e1e;
-    --border: rgba(255,255,255,0.07);
-    --border2: rgba(255,255,255,0.12);
-    --text: #f0ede8;
-    --text-muted: #6b6b6b;
-    --text-dim: #3d3d3d;
-    --green: #4ade80;
-    --amber: #fbbf24;
-    --red: #f87171;
-    --accent: #c8f04a;
-    --radius: 6px;
-    --radius-lg: 10px;
-  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
-  .page { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
-  .top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 36px; }
-  .top-left h1 { font-size: 22px; font-weight: 300; letter-spacing: -0.5px; }
-  .top-left h1 span { color: var(--accent); }
-  .top-left p { font-size: 12px; color: var(--text-muted); margin-top: 5px; font-family: 'DM Mono', monospace; }
-  .refresh-btn { display: flex; align-items: center; gap: 8px; font-family: 'DM Mono', monospace; font-size: 11px; padding: 9px 16px; border-radius: var(--radius); border: 1px solid var(--border2); background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.2s; letter-spacing: 0.05em; text-transform: uppercase; }
-  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .refresh-btn svg { width: 13px; height: 13px; }
-  .refresh-btn.spinning svg { animation: spin 0.8s linear infinite; }
-  .last-updated { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); margin-top: 6px; text-align: right; }
-  .metrics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 28px; }
-  .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 16px; }
-  .metric .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 10px; }
-  .metric .val { font-size: 22px; font-weight: 300; font-family: 'DM Mono', monospace; letter-spacing: -1px; }
-  .metric .sub { font-size: 11px; color: var(--text-dim); margin-top: 5px; }
-  .metric.accent-green { border-color: rgba(74,222,128,0.2); }
-  .metric.accent-green .val { color: var(--green); }
-  .metric.accent-red { border-color: rgba(248,113,113,0.2); }
-  .metric.accent-red .val { color: var(--red); }
-  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
-  .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
-  .chart-box h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 16px; font-weight: 400; }
-  .legend { display: flex; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
-  .legend span { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
-  .leg-sq { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .bar-lbl { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-muted); width: 54px; text-align: right; flex-shrink: 0; }
-  .bar-track { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; position: relative; }
-  .bar-fill { height: 100%; border-radius: 3px; }
-  .bar-fill2 { height: 100%; border-radius: 3px; position: absolute; top: 0; left: 0; opacity: 0.5; }
-  .bar-val { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-dim); width: 70px; flex-shrink: 0; }
-  .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
-  .table-header h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 400; }
-  .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .controls input, .controls select { font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text); outline: none; transition: border-color 0.2s; }
-  .controls input { min-width: 200px; }
-  .controls input::placeholder { color: var(--text-dim); }
-  .controls input:focus, .controls select:focus { border-color: var(--border2); }
-  .controls select option { background: #1e1e1e; }
-  .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  th { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); font-size: 10px; font-weight: 400; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); background: var(--surface2); font-family: 'DM Mono', monospace; }
-  td { padding: 11px 14px; border-bottom: 1px solid var(--border); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(255,255,255,0.02); }
-  td.mono { font-family: 'DM Mono', monospace; font-size: 11px; }
-  .days-crit { color: var(--red); font-weight: 500; }
-  .days-warn { color: var(--amber); font-weight: 500; }
-  .days-past { color: var(--text-dim); font-style: italic; }
-  .health-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
-  .h-high { background: var(--green); }
-  .h-med  { background: var(--amber); }
-  .h-low  { background: var(--red); }
-  .h-pend { background: var(--text-dim); }
-  .health-cell { display: flex; align-items: center; }
-  .error-banner { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 20px; font-size: 12px; color: var(--red); font-family: 'DM Mono', monospace; display: none; }
-  .empty { text-align: center; color: var(--text-dim); padding: 32px; font-size: 12px; font-family: 'DM Mono', monospace; }
-  #loading { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; transition: opacity 0.4s; }
-  #loading.hidden { opacity: 0; pointer-events: none; }
-  .spin-ring { width: 28px; height: 28px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 14px; }
-  #loading p { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; }
-  .fade-in { animation: fadeIn 0.4s ease both; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @media (max-width: 900px) { .metrics { grid-template-columns: repeat(3,1fr); } .charts { grid-template-columns: 1fr; } }
-  @media (max-width: 600px) { .metrics { grid-template-columns: 1fr 1fr; } .top { flex-direction: column; gap: 14px; } }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; color: #1a1a1a; padding: 1.5rem; }
+  h1 { font-size: 16px; font-weight: 600; color: #111; }
+  .header-row { display: flex; align-items: center; gap: 12px; margin-bottom: 1.2rem; flex-wrap: wrap; }
+  .updated { font-size: 10px; color: #aaa; }
+  .refresh-btn { font-size: 11px; padding: 3px 10px; border-radius: 6px; border: 1px solid #ddd; background: #f5f5f5; color: #444; cursor: pointer; }
+  .refresh-btn:hover { background: #eee; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+  .status-dot.live { background: #639922; }
+  .status-dot.error { background: #E24B4A; }
+  .status-dot.loading { background: #BA7517; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .status-text { font-size: 10px; color: #888; }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.2rem; }
+  .metric { background: #f5f5f5; border-radius: 8px; padding: 0.6rem 0.8rem; }
+  .metric-label { font-size: 10px; color: #666; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .metric-val { font-size: 20px; font-weight: 500; }
+  .metric-val.red { color: #E24B4A; }
+  .metric-val.amber { color: #BA7517; }
+  .filters { display: flex; gap: 6px; margin-bottom: 0.8rem; flex-wrap: wrap; align-items: center; }
+  .filters label { font-size: 11px; color: #666; }
+  .filters select, .filters input { font-size: 11px; padding: 3px 6px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #1a1a1a; }
+  .filters input { width: 140px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th { text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: #888; padding: 5px 7px; border-bottom: 1px solid #eee; cursor: pointer; white-space: nowrap; user-select: none; }
+  thead th:hover { color: #333; }
+  tbody tr { border-bottom: 1px solid #f0f0f0; }
+  tbody tr:hover { background: #fafafa; }
+  tbody tr.unassigned { background: #fffbf2; }
+  tbody tr.unassigned:hover { background: #fff5e0; }
+  td { padding: 6px 7px; vertical-align: middle; }
+  .badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 99px; font-size: 10px; font-weight: 500; }
+  .badge-high   { background: #EAF3DE; color: #3B6D11; }
+  .badge-medium { background: #FAEEDA; color: #854F0B; }
+  .badge-low    { background: #FCEBEB; color: #A32D2D; }
+  .badge-none   { background: #f0f0f0; color: #888; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .dot-high   { background: #639922; }
+  .dot-medium { background: #BA7517; }
+  .dot-low    { background: #E24B4A; }
+  .days-stale { color: #E24B4A; font-weight: 500; }
+  .days-ok    { color: #639922; }
+  .days-warn  { color: #BA7517; }
+  .days-none  { color: #aaa; font-style: italic; }
+  .end-urgent { color: #E24B4A; font-weight: 500; }
+  .end-soon   { color: #BA7517; font-weight: 500; }
+  .end-ok     { color: #888; }
+  .end-past   { color: #aaa; font-style: italic; }
+  .region-tag { font-size: 10px; color: #666; background: #f0f0f0; padding: 1px 5px; border-radius: 4px; }
+  .no-csm-tag { font-size: 10px; color: #854F0B; background: #FAEEDA; padding: 1px 5px; border-radius: 4px; }
+  .no-results { text-align: center; padding: 2rem; color: #999; font-size: 13px; }
+  .error-banner { background: #FCEBEB; border: 1px solid #f5c6c6; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 12px; color: #A32D2D; display: none; }
 </style>
 </head>
 <body>
 
-<div id="loading">
-  <div class="spin-ring"></div>
-  <p>Loading pipeline data…</p>
+<div class="header-row">
+  <h1>Customer Health Dashboard</h1>
+  <span class="status-dot loading" id="statusDot"></span>
+  <span class="status-text" id="statusText">Loading…</span>
+  <button class="refresh-btn" onclick="fetchData()">↻ Refresh</button>
+  <span class="updated" id="lastUpdated"></span>
 </div>
 
-<div class="page">
-  <div class="top">
-    <div class="top-left">
-      <h1>Contract <span>renewal pipeline</span></h1>
-      <p id="subtitle">Loading…</p>
-    </div>
-    <div style="text-align:right">
-      <button class="refresh-btn" id="refreshBtn" onclick="doRefresh()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-          <path d="M21 3v5h-5"/>
-          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-          <path d="M8 16H3v5"/>
-        </svg>
-        Refresh
-      </button>
-      <div class="last-updated" id="lastUpdated"></div>
-    </div>
-  </div>
+<div class="error-banner" id="errorBanner"></div>
+<div class="metrics" id="metrics"></div>
 
-  <div class="error-banner" id="errorBanner"></div>
-  <div class="metrics" id="metrics"></div>
+<div class="filters">
+  <label>Health:</label>
+  <select id="fHealth">
+    <option value="">All</option>
+    <option value="High">High</option>
+    <option value="Medium">Medium</option>
+    <option value="Low">Low</option>
+    <option value="None">No score</option>
+  </select>
+  <label>Region:</label>
+  <select id="fRegion"><option value="">All</option></select>
+  <label>CSM:</label>
+  <select id="fCsm">
+    <option value="">All</option>
+    <option value="__none__">No CSM</option>
+  </select>
+  <label>Contact:</label>
+  <select id="fContact">
+    <option value="">All</option>
+    <option value="overdue">Overdue (90+ days)</option>
+    <option value="warn">Due soon (30–90 days)</option>
+    <option value="ok">Recent (&lt; 30 days)</option>
+    <option value="none">Never recorded</option>
+  </select>
+  <label>Contract End:</label>
+  <select id="fEnd">
+    <option value="">All</option>
+    <option value="past">Past</option>
+    <option value="urgent">Within 30 days</option>
+    <option value="soon">Within 90 days</option>
+  </select>
+  <input type="text" id="fSearch" placeholder="Search account…" />
+</div>
 
-  <div class="charts">
-    <div class="chart-box">
-      <h3>Monthly pipeline vs weighted (£k)</h3>
-      <div class="legend">
-        <span><span class="leg-sq" style="background:#60a5fa"></span>Contract value</span>
-        <span><span class="leg-sq" style="background:#4ade80"></span>Weighted forecast</span>
-      </div>
-      <div id="monthly-bars"></div>
-    </div>
-    <div class="chart-box">
-      <h3>Pipeline by health score</h3>
-      <div class="legend">
-        <span><span class="leg-sq" style="background:#4ade80"></span>High</span>
-        <span><span class="leg-sq" style="background:#fbbf24"></span>Medium</span>
-        <span><span class="leg-sq" style="background:#f87171"></span>Low</span>
-        <span><span class="leg-sq" style="background:#3d3d3d"></span>Pending</span>
-      </div>
-      <div id="health-bars"></div>
-    </div>
-  </div>
-
-  <div class="table-header">
-    <h2 id="row-count">All contracts</h2>
-    <div class="controls">
-      <input type="text" id="search" placeholder="Search account…" oninput="renderTable()">
-      <select id="fh" onchange="renderTable()">
-        <option value="">All health</option>
-        <option value="High">High</option>
-        <option value="Medium">Medium</option>
-        <option value="Low">Low</option>
-        <option value="Pending">Pending</option>
-      </select>
-      <select id="so" onchange="renderTable()">
-        <option value="days">Sort: days left</option>
-        <option value="val">Sort: value ↓</option>
-        <option value="name">Sort: name A–Z</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="tbl-wrap">
-    <table>
-      <thead><tr>
-        <th style="width:30%">Account</th>
-        <th style="width:12%">Contract end</th>
-        <th style="width:12%">Next renewal</th>
-        <th style="width:7%">Days</th>
-        <th style="width:14%">Contract value</th>
-        <th style="width:14%">Weighted</th>
-        <th style="width:11%">Health</th>
-      </tr></thead>
-      <tbody id="tbody"></tbody>
-    </table>
-  </div>
+<div style="overflow-x:auto;">
+  <table>
+    <thead>
+      <tr>
+        <th onclick="sortBy('account')">Account <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('csm')">CSM <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('region')">Region <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('health')">Health <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('lastContact')">Last Contact <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('daysSince')">Days Since <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('daysToContractEnd')">Days To Contract End <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('nextInvRenewal')">Next Inv. Renewal <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('contractEnd')">Contract End <span style="opacity:.4;">↕</span></th>
+        <th onclick="sortBy('contractValue')">Value (USD) <span style="opacity:.4;">↕</span></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"><tr><td colspan="10" style="text-align:center;padding:2rem;color:#999;">Fetching live data…</td></tr></tbody>
+  </table>
+  <div id="no-results" class="no-results" style="display:none;">No accounts match your filters.</div>
 </div>
 
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbykqCyvPjt2EIislOezWXt21cBT8w_E8fKwyECAGq3R2knGFSXiSQ8vffMk2j-1A0UB/exec';
-const WEIGHT = { High: 0.9, Medium: 0.75, Low: 0.4, Pending: 0 };
-let DATA = [];
+const REFRESH_MS = 5 * 60 * 1000;
 
-// Apps Script supports JSONP — use that to avoid CORS
-function loadData() {
-  return new Promise((resolve, reject) => {
-    const cb = '_asCb_' + Date.now();
-    const url = APPS_SCRIPT_URL + '?callback=' + cb + '&t=' + Date.now();
+let allData = [];
+let sortCol = 'daysToContractEnd', sortDir = 1;
 
-    const timer = setTimeout(() => {
-      delete window[cb];
-      script.remove();
-      reject(new Error('Request timed out. Make sure the Apps Script is deployed as "Anyone" access.'));
-    }, 15000);
+// ── Date helpers ──────────────────────────────────────────────────────────
+function todayDate() { const d = new Date(); d.setHours(0,0,0,0); return d; }
 
-    window[cb] = (raw) => {
-      clearTimeout(timer);
-      delete window[cb];
-      script.remove();
-      try {
-        // raw may be array directly or wrapped
-        const arr = Array.isArray(raw) ? raw : raw.data || [];
-        const today = new Date(); today.setHours(0,0,0,0);
-        const result = arr
-          .filter(r => r.name && r.name !== 'Account Name')
-          .map(r => {
-            const healthRaw = String(r.health || '').trim();
-            const health = ['High','Medium','Low'].includes(healthRaw) ? healthRaw : 'Pending';
-            // Recalculate days from today using the renewal date string dd/MM/yyyy
-            let days = 0;
-            if (r.renewal) {
-              const p = r.renewal.split('/');
-              if (p.length === 3) {
-                const rDate = new Date(+p[2], +p[1]-1, +p[0]);
-                days = Math.round((rDate - today) / 86400000);
-              }
-            }
-            const val = parseFloat(String(r.val||0).replace(/[^0-9.-]/g,'')) || 0;
-            return { name: r.name, end: r.end||'', renewal: r.renewal||'', days, val, health };
-          })
-          .filter(d => d.name);
-        resolve(result);
-      } catch(e) { reject(e); }
-    };
-
-    const script = document.createElement('script');
-    script.src = url;
-    script.onerror = () => {
-      clearTimeout(timer);
-      delete window[cb];
-      reject(new Error('Failed to reach the Apps Script URL. Check it is deployed and access is set to "Anyone".'));
-    };
-    document.head.appendChild(script);
-  });
-}
-
-// Helpers
-function fmt(n) { return '£' + Math.round(n).toLocaleString(); }
-function fmtDate(s) {
-  if (!s) return '—';
-  const p = s.split('/');
-  if (p.length !== 3) return s;
-  return p[0] + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p[1]-1] + ' ' + p[2].slice(-2);
-}
-function wt(d) { return Math.round(d.val * (WEIGHT[d.health] ?? 0)); }
-
-// Render
-function renderMetrics() {
-  const totalVal = DATA.reduce((a,d)=>a+d.val,0);
-  const totalWt  = DATA.reduce((a,d)=>a+wt(d),0);
-  const lowVal   = DATA.filter(d=>d.health==='Low').reduce((a,d)=>a+d.val,0);
-  const due90    = DATA.filter(d=>d.days>=0&&d.days<=90).reduce((a,d)=>a+d.val,0);
-  const highCt   = DATA.filter(d=>d.health==='High').length;
-  document.getElementById('metrics').innerHTML = `
-    <div class="metric fade-in"><div class="lbl">Total pipeline</div><div class="val">${fmt(totalVal)}</div><div class="sub">${DATA.length} contracts</div></div>
-    <div class="metric fade-in" style="animation-delay:.05s"><div class="lbl">Weighted forecast</div><div class="val">${fmt(totalWt)}</div><div class="sub">Confidence-adjusted</div></div>
-    <div class="metric fade-in" style="animation-delay:.1s"><div class="lbl">Due ≤ 90 days</div><div class="val">${fmt(due90)}</div><div class="sub">${DATA.filter(d=>d.days>=0&&d.days<=90).length} contracts</div></div>
-    <div class="metric accent-red fade-in" style="animation-delay:.15s"><div class="lbl">Low health value</div><div class="val">${fmt(lowVal)}</div><div class="sub">${DATA.filter(d=>d.health==='Low').length} accounts</div></div>
-    <div class="metric accent-green fade-in" style="animation-delay:.2s"><div class="lbl">High health</div><div class="val">${highCt}</div><div class="sub">${DATA.length?Math.round(highCt/DATA.length*100):0}% of accounts</div></div>
-  `;
-}
-
-function renderMonthly() {
-  const months = {};
-  DATA.forEach(d => {
-    if (d.days < 0 || !d.renewal) return;
-    const p = d.renewal.split('/');
-    if (p.length !== 3) return;
-    const key = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p[1]-1] + ' ' + p[2].slice(-2);
-    if (!months[key]) months[key] = {val:0,wt:0};
-    months[key].val += d.val;
-    months[key].wt  += wt(d);
-  });
-  const order = ['Jan 26','Feb 26','Mar 26','Apr 26','May 26','Jun 26','Jul 26','Aug 26','Sep 26','Oct 26','Nov 26','Dec 26','Jan 27','Feb 27','Mar 27'];
-  const rows = order.filter(k=>months[k]).map(k=>({month:k,...months[k]}));
-  if (!rows.length) { document.getElementById('monthly-bars').innerHTML='<div class="empty">No data</div>'; return; }
-  const maxVal = Math.max(...rows.map(r=>r.val));
-  document.getElementById('monthly-bars').innerHTML = rows.map(r=>`
-    <div class="bar-row">
-      <div class="bar-lbl">${r.month}</div>
-      <div class="bar-track">
-        <div class="bar-fill" style="width:${Math.round(r.val/maxVal*100)}%;background:#60a5fa"></div>
-        <div class="bar-fill2" style="width:${Math.round(r.wt/maxVal*100)}%;background:#4ade80"></div>
-      </div>
-      <div class="bar-val">${r.val>=1000?'£'+(r.val/1000).toFixed(0)+'k':fmt(r.val)}</div>
-    </div>`).join('');
-}
-
-function renderHealth() {
-  document.getElementById('health-bars').innerHTML = '';
-  const total = DATA.reduce((a,d)=>a+d.val,0)||1;
-  [{h:'High',color:'#4ade80'},{h:'Medium',color:'#fbbf24'},{h:'Low',color:'#f87171'},{h:'Pending',color:'#3d3d3d'}]
-  .forEach(g => {
-    const items = DATA.filter(d=>d.health===g.h);
-    const val   = items.reduce((a,d)=>a+d.val,0);
-    const wtVal = items.reduce((a,d)=>a+wt(d),0);
-    const pct   = Math.round(val/total*100);
-    document.getElementById('health-bars').innerHTML += `
-      <div class="bar-row">
-        <div class="bar-lbl">${g.h} (${items.length})</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${g.color}"></div></div>
-        <div class="bar-val">${pct}% · ${fmt(wtVal)}</div>
-      </div>`;
-  });
-}
-
-function renderTable() {
-  const q  = document.getElementById('search').value.toLowerCase();
-  const fh = document.getElementById('fh').value;
-  const so = document.getElementById('so').value;
-  let rows = DATA.filter(d => {
-    if (q && !d.name.toLowerCase().includes(q)) return false;
-    if (fh && d.health !== fh) return false;
-    return true;
-  });
-  if (so==='days') rows.sort((a,b)=>a.days-b.days);
-  else if (so==='val') rows.sort((a,b)=>b.val-a.val);
-  else rows.sort((a,b)=>a.name.localeCompare(b.name));
-  document.getElementById('row-count').textContent = `${rows.length} contract${rows.length!==1?'s':''}`;
-  const dot = {High:'h-high',Medium:'h-med',Low:'h-low',Pending:'h-pend'};
-  document.getElementById('tbody').innerHTML = rows.length ? rows.map(d => {
-    const dCls = d.days<0?'days-past':d.days<=30?'days-crit':d.days<=90?'days-warn':'';
-    const dTxt = d.days<0?'past':d.days;
-    const wtVal = wt(d);
-    return `<tr>
-      <td title="${d.name}" style="font-weight:500">${d.name}</td>
-      <td class="mono">${fmtDate(d.end)}</td>
-      <td class="mono">${fmtDate(d.renewal)}</td>
-      <td class="mono ${dCls}">${dTxt}</td>
-      <td class="mono">${fmt(d.val)}</td>
-      <td class="mono">${wtVal>0?fmt(wtVal):'—'}</td>
-      <td><div class="health-cell"><span class="health-dot ${dot[d.health]??'h-pend'}"></span>${d.health}</div></td>
-    </tr>`;
-  }).join('') : `<tr><td colspan="7" class="empty">No contracts match.</td></tr>`;
-}
-
-async function doRefresh() {
-  const btn = document.getElementById('refreshBtn');
-  const err = document.getElementById('errorBanner');
-  btn.classList.add('spinning'); btn.disabled = true;
-  err.style.display = 'none';
-  try {
-    DATA = await loadData();
-    renderMetrics(); renderMonthly(); renderHealth(); renderTable();
-    const now = new Date();
-    document.getElementById('lastUpdated').textContent = 'Updated ' + now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    document.getElementById('subtitle').textContent = `As of ${now.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} · Weighted: High=90% · Medium=75% · Low=40%`;
-  } catch(e) {
-    err.style.display = 'block';
-    err.textContent = '⚠ ' + e.message;
-    console.error(e);
+function parseDate(s) {
+  if (!s || !s.trim() || s.trim().toLowerCase() === 'past') return null;
+  s = s.trim();
+  if (/^\d{4,5}$/.test(s)) {
+    const d = new Date((parseInt(s) - 25569) * 86400000);
+    return isNaN(d.getTime()) ? null : d;
   }
-  setTimeout(()=>{ btn.classList.remove('spinning'); btn.disabled=false; }, 600);
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
+    const [d,m,y] = s.split('/');
+    return new Date(+y, +m-1, +d);
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s.slice(0,10));
+  return null;
 }
 
-window.addEventListener('DOMContentLoaded', async () => {
-  await doRefresh();
-  document.getElementById('loading').classList.add('hidden');
-});
+function fmtDate(d) {
+  if (!d) return null;
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+function daysSince(d) { if (!d) return null; return Math.floor((todayDate() - d) / 86400000); }
+function daysTo(d)    { if (!d) return null; return Math.floor((d - todayDate()) / 86400000); }
+function contactClass(n) { if(n===null)return'days-none'; if(n>=90)return'days-stale'; if(n>=30)return'days-warn'; return'days-ok'; }
+function endClass(n)     { if(n===null)return''; if(n<0)return'end-past'; if(n<=30)return'end-urgent'; if(n<=90)return'end-soon'; return'end-ok'; }
+function healthOrder(h)  { return h==='Low'?0:h==='Medium'?1:h==='High'?2:-1; }
+
+// ── CSV parser ────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  const headers = splitLine(lines[0]).map(h => h.replace(/^"|"$/g,'').trim());
+  return lines.slice(1).map(line => {
+    const vals = splitLine(line).map(v => v.replace(/^"|"$/g,'').replace(/""/g,'"').trim());
+    if (vals.every(v => !v)) return null;
+    const obj = {};
+    headers.forEach((h,i) => obj[h] = vals[i] || '');
+    return obj;
+  }).filter(Boolean);
+}
+
+function splitLine(line) {
+  const res = []; let cur = ''; let q = false;
+  for (const c of line) {
+    if (c === '"') q = !q;
+    else if (c === ',' && !q) { res.push(cur); cur = ''; }
+    else cur += c;
+  }
+  res.push(cur);
+  return res;
+}
+
+// ── Map CSV row (Customer Health sheet) ──────────────────────────────────
+function mapRow(row) {
+  // Column names from the Customer Health sheet
+  const account  = (row['Account: Account Name'] || row['Account Name'] || '').trim();
+  if (!account) return null;
+
+  const csm      = (row['Account PM/CSM'] || '').trim() || null;
+  const region   = (row['Account Region'] || '').trim() || null;
+
+  // Health can be emoji col or text col
+  let health = (row['Customer Health1'] || '').trim();
+  if (!health) {
+    // try stripping emoji from the emoji column
+    health = (row['Customer Health'] || '').replace(/[^\w\s]/g,'').trim();
+  }
+  health = health.replace(/\s+/g,'') || null; // "High","Medium","Low"
+
+  const lastContact  = parseDate(row['Date of last contact'] || '');
+  const contractEnd  = parseDate(row['Contract End Date'] || '');
+
+  return { account, csm, region, health, lastContact, contractEnd, nextInvRenewal: null, contractValue: 0 };
+}
+
+// ── Fetch JSON from Google Apps Script (no CORS issues) ──────────────────
+async function tryFetch() {
+  const r = await fetch(APPS_SCRIPT_URL + '?t=' + Date.now());
+  if (!r.ok) throw new Error(`Server returned ${r.status}`);
+  return await r.json();
+}
+
+// ── Main fetch & render ───────────────────────────────────────────────────
+async function fetchData() {
+  setStatus('loading', 'Refreshing…');
+  document.getElementById('errorBanner').style.display = 'none';
+
+  try {
+    const json = await tryFetch();
+    if (!Array.isArray(json) || json.length === 0) throw new Error('No data returned from Apps Script.');
+
+    const mapped = json.map(r => ({
+      account:        r.account || '',
+      csm:            r.csm || null,
+      region:         r.region || null,
+      health:         r.health || null,
+      lastContact:    parseDate(r.lastContact),
+      contractEnd:    parseDate(r.contractEnd),
+      nextInvRenewal: parseDate(r.nextInvRenewal),
+      contractValue:  r.contractValue || 0,
+    })).filter(r => r.account);
+
+    allData = mapped;
+    repopulateSelects();
+    render();
+
+    const now = new Date();
+    document.getElementById('lastUpdated').textContent =
+      `Last updated ${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+    setStatus('live', `${allData.length} accounts loaded`);
+
+  } catch(err) {
+    setStatus('error', 'Failed to load');
+    const b = document.getElementById('errorBanner');
+    b.style.display = '';
+    b.innerHTML = `⚠ ${err.message} — Make sure the Apps Script is deployed as <strong>Anyone</strong> can access.`;
+    // If we have stale data, keep showing it
+    if (allData.length) render();
+  }
+}
+
+function setStatus(state, text) {
+  document.getElementById('statusDot').className = 'status-dot ' + state;
+  document.getElementById('statusText').textContent = text;
+}
+
+// ── Sort & filter ─────────────────────────────────────────────────────────
+function sortBy(col) { if(sortCol===col) sortDir*=-1; else{sortCol=col;sortDir=1;} render(); }
+
+function getFiltered() {
+  const health  = document.getElementById('fHealth').value;
+  const region  = document.getElementById('fRegion').value;
+  const csm     = document.getElementById('fCsm').value;
+  const contact = document.getElementById('fContact').value;
+  const end     = document.getElementById('fEnd').value;
+  const search  = document.getElementById('fSearch').value.toLowerCase();
+
+  return allData.filter(r => {
+    if (health==='None' && r.health) return false;
+    if (health && health!=='None' && r.health!==health) return false;
+    if (region && (r.region||'')!==region) return false;
+    if (csm==='__none__' && r.csm) return false;
+    else if (csm && csm!=='__none__' && r.csm!==csm) return false;
+    const ds = daysSince(r.lastContact);
+    if (contact==='overdue' && !(ds!==null&&ds>=90)) return false;
+    if (contact==='warn'    && !(ds!==null&&ds>=30&&ds<90)) return false;
+    if (contact==='ok'      && !(ds!==null&&ds<30)) return false;
+    if (contact==='none'    && ds!==null) return false;
+    const dt = daysTo(r.contractEnd);
+    if (end==='past'   && !(dt!==null&&dt<0)) return false;
+    if (end==='urgent' && !(dt!==null&&dt>=0&&dt<=30)) return false;
+    if (end==='soon'   && !(dt!==null&&dt>=0&&dt<=90)) return false;
+    if (search && !r.account.toLowerCase().includes(search)) return false;
+    return true;
+  }).sort((a,b) => {
+    let av,bv;
+    if      (sortCol==='health')            { av=healthOrder(a.health);  bv=healthOrder(b.health); }
+    else if (sortCol==='daysSince')         { av=daysSince(a.lastContact)??9999; bv=daysSince(b.lastContact)??9999; }
+    else if (sortCol==='daysToContractEnd') { av=daysTo(a.contractEnd)??9999;   bv=daysTo(b.contractEnd)??9999; }
+    else if (sortCol==='contractEnd')       { av=a.contractEnd||new Date(9999,0); bv=b.contractEnd||new Date(9999,0); }
+    else if (sortCol==='nextInvRenewal')    { av=a.nextInvRenewal||new Date(9999,0); bv=b.nextInvRenewal||new Date(9999,0); }
+    else if (sortCol==='lastContact')       { av=a.lastContact||new Date(0); bv=b.lastContact||new Date(0); }
+    else if (sortCol==='contractValue')     { av=a.contractValue; bv=b.contractValue; }
+    else { av=(a[sortCol]||'').toLowerCase(); bv=(b[sortCol]||'').toLowerCase(); }
+    return av<bv?-sortDir:av>bv?sortDir:0;
+  });
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function renderMetrics(data) {
+  const soon = data.filter(r=>{ const d=daysTo(r.contractEnd); return d!==null&&d>=0&&d<=90; }).length;
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Total Accounts</div><div class="metric-val">${data.length}</div></div>
+    <div class="metric"><div class="metric-label">No CSM Assigned</div><div class="metric-val amber">${data.filter(r=>!r.csm).length}</div></div>
+    <div class="metric"><div class="metric-label">Low Health</div><div class="metric-val red">${data.filter(r=>r.health==='Low').length}</div></div>
+    <div class="metric"><div class="metric-label">Contract End ≤90 Days</div><div class="metric-val amber">${soon}</div></div>`;
+}
+
+function render() {
+  const data = getFiltered();
+  renderMetrics(data);
+  const noRes = document.getElementById('no-results');
+  if (!data.length) { document.getElementById('tbody').innerHTML=''; noRes.style.display=''; return; }
+  noRes.style.display = 'none';
+
+  document.getElementById('tbody').innerHTML = data.map(r => {
+    const ds = daysSince(r.lastContact);
+    const dt = daysTo(r.contractEnd);
+    const ec = endClass(dt);
+    const cc = contactClass(ds);
+    const hb = r.health==='High'   ? `<span class="badge badge-high"><span class="dot dot-high"></span>High</span>`
+             : r.health==='Medium' ? `<span class="badge badge-medium"><span class="dot dot-medium"></span>Medium</span>`
+             : r.health==='Low'    ? `<span class="badge badge-low"><span class="dot dot-low"></span>Low</span>`
+             : `<span class="badge badge-none">—</span>`;
+    const short = r.account.length>32 ? r.account.slice(0,30)+'…' : r.account;
+    const dtCell = dt===null ? '<span style="color:#bbb;">—</span>'
+                 : dt<0     ? `<span class="${ec}">${Math.abs(dt)}d overdue</span>`
+                 : `<span class="${ec}">${dt}d</span>`;
+
+    return `<tr class="${!r.csm?'unassigned':''}">
+      <td title="${r.account}" style="max-width:195px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${short}</td>
+      <td style="white-space:nowrap;font-size:11px;">${r.csm||'<span class="no-csm-tag">Unassigned</span>'}</td>
+      <td>${r.region?`<span class="region-tag">${r.region}</span>`:'<span style="color:#bbb;">—</span>'}</td>
+      <td>${hb}</td>
+      <td style="white-space:nowrap;color:#888;font-size:11px;">${r.lastContact?fmtDate(r.lastContact):'<span style="font-style:italic;color:#bbb;">—</span>'}</td>
+      <td style="font-size:11px;">${ds===null?'<span class="days-none">—</span>':`<span class="${cc}">${ds}d ago</span>`}</td>
+      <td style="font-size:11px;">${dtCell}</td>
+      <td style="white-space:nowrap;font-size:11px;color:#888;">${r.nextInvRenewal?fmtDate(r.nextInvRenewal):'—'}</td>
+      <td style="white-space:nowrap;font-size:11px;" class="${ec}">${r.contractEnd?fmtDate(r.contractEnd):'<span style="color:#bbb;">—</span>'}</td>
+      <td style="white-space:nowrap;font-size:11px;color:#888;">${r.contractValue?'$'+r.contractValue.toLocaleString():'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function repopulateSelects() {
+  const regions = [...new Set(allData.map(r=>r.region).filter(Boolean))].sort();
+  const csms    = [...new Set(allData.map(r=>r.csm).filter(Boolean))].sort();
+  const rSel = document.getElementById('fRegion');
+  const cSel = document.getElementById('fCsm');
+  const rv = rSel.value, cv = cSel.value;
+  rSel.innerHTML = '<option value="">All</option>';
+  cSel.innerHTML = '<option value="">All</option><option value="__none__">No CSM</option>';
+  regions.forEach(r=>{ const o=document.createElement('option'); o.value=r; o.textContent=r; rSel.appendChild(o); });
+  csms.forEach(c=>   { const o=document.createElement('option'); o.value=c; o.textContent=c; cSel.appendChild(o); });
+  rSel.value=rv; cSel.value=cv;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+['fHealth','fRegion','fCsm','fContact','fEnd','fSearch'].forEach(id =>
+  document.getElementById(id).addEventListener('input', render)
+);
+
+fetchData();
+setInterval(fetchData, REFRESH_MS);
 </script>
 </body>
 </html>
