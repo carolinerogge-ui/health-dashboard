@@ -210,11 +210,32 @@ function mapRow(row) {
   return { account, csm, region, health, lastContact, contractEnd, nextInvRenewal: null, contractValue: 0 };
 }
 
-// ── Fetch JSON from Google Apps Script (no CORS issues) ──────────────────
-async function tryFetch() {
-  const r = await fetch(APPS_SCRIPT_URL + '?t=' + Date.now());
-  if (!r.ok) throw new Error(`Server returned ${r.status}`);
-  return await r.json();
+// ── Fetch via JSONP — bypasses CORS completely ────────────────────────────
+function tryFetch() {
+  return new Promise((resolve, reject) => {
+    const cbName = 'cb_' + Date.now();
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => {
+      delete window[cbName];
+      document.body.removeChild(script);
+      reject(new Error('Request timed out — check the Apps Script is deployed as Anyone can access.'));
+    }, 10000);
+
+    window[cbName] = function(data) {
+      clearTimeout(timeout);
+      delete window[cbName];
+      document.body.removeChild(script);
+      resolve(data);
+    };
+
+    script.src = APPS_SCRIPT_URL + '?callback=' + cbName + '&t=' + Date.now();
+    script.onerror = () => {
+      clearTimeout(timeout);
+      delete window[cbName];
+      reject(new Error('Script load failed — check the Apps Script URL is correct.'));
+    };
+    document.body.appendChild(script);
+  });
 }
 
 // ── Main fetch & render ───────────────────────────────────────────────────
