@@ -128,7 +128,7 @@
 </div>
 
 <script>
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxSk5WQerb-xMb2u8cA228RVoAXjObq_9PjiRTqC7e06HgNLJ6Z8gn68V1p7MY0-evN/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxKId_eO2HQRN_-G3Zv-Le6FvAWIlzuH-pXp47d1e4fRhp5coHEtkW5NlT2YOt4NzF5/exec';
 const REFRESH_MS = 5 * 60 * 1000;
 
 let allData = [];
@@ -140,15 +140,26 @@ function todayDate() { const d = new Date(); d.setHours(0,0,0,0); return d; }
 function parseDate(s) {
   if (!s || !s.trim() || s.trim().toLowerCase() === 'past') return null;
   s = s.trim();
+
+  // Excel serial number
   if (/^\d{4,5}$/.test(s)) {
     const d = new Date((parseInt(s) - 25569) * 86400000);
     return isNaN(d.getTime()) ? null : d;
   }
+  // dd/MM/yyyy — always treat first segment as day
   if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
-    const [d,m,y] = s.split('/');
-    return new Date(+y, +m-1, +d);
+    const parts = s.split('/');
+    const day   = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const year  = parseInt(parts[2], 10);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    return new Date(year, month - 1, day);
   }
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s.slice(0,10));
+  // yyyy-MM-dd
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const parts = s.slice(0,10).split('-');
+    return new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+  }
   return null;
 }
 
