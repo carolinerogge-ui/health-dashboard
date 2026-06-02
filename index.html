@@ -1,337 +1,367 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Customer Health Dashboard</title>
+<title>Contract Renewal Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0ede8;
+    --text-muted: #6b6b6b;
+    --text-dim: #3d3d3d;
+    --green: #4ade80;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --accent: #c8f04a;
+    --radius: 6px;
+    --radius-lg: 10px;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; color: #1a1a1a; padding: 1.5rem; }
-  h1 { font-size: 16px; font-weight: 600; margin-bottom: 1.2rem; color: #111; }
-  .updated { font-size: 10px; color: #aaa; font-weight: 400; margin-left: 8px; }
-  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.2rem; }
-  .metric { background: #f5f5f5; border-radius: 8px; padding: 0.6rem 0.8rem; }
-  .metric-label { font-size: 10px; color: #666; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.03em; }
-  .metric-val { font-size: 20px; font-weight: 500; }
-  .metric-val.red { color: #E24B4A; }
-  .metric-val.amber { color: #BA7517; }
-  .filters { display: flex; gap: 6px; margin-bottom: 0.8rem; flex-wrap: wrap; align-items: center; }
-  .filters label { font-size: 11px; color: #666; }
-  .filters select, .filters input { font-size: 11px; padding: 3px 6px; border-radius: 6px; border: 1px solid #ddd; background: #fff; color: #1a1a1a; }
-  .filters input { width: 140px; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  thead th { text-align: left; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: #888; padding: 5px 7px; border-bottom: 1px solid #eee; cursor: pointer; white-space: nowrap; user-select: none; }
-  thead th:hover { color: #333; }
-  tbody tr { border-bottom: 1px solid #f0f0f0; }
-  tbody tr:hover { background: #fafafa; }
-  tbody tr.unassigned { background: #fffbf2; }
-  tbody tr.unassigned:hover { background: #fff5e0; }
-  td { padding: 6px 7px; vertical-align: middle; }
-  .badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 99px; font-size: 10px; font-weight: 500; }
-  .badge-high { background: #EAF3DE; color: #3B6D11; }
-  .badge-medium { background: #FAEEDA; color: #854F0B; }
-  .badge-low { background: #FCEBEB; color: #A32D2D; }
-  .badge-none { background: #f0f0f0; color: #888; }
-  .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-  .dot-high { background: #639922; }
-  .dot-medium { background: #BA7517; }
-  .dot-low { background: #E24B4A; }
-  .days-stale { color: #E24B4A; font-weight: 500; }
-  .days-ok { color: #639922; }
-  .days-warn { color: #BA7517; }
-  .days-none { color: #aaa; font-style: italic; }
-  .renewal-urgent { color: #E24B4A; font-weight: 500; }
-  .renewal-soon   { color: #BA7517; font-weight: 500; }
-  .renewal-ok     { color: #888; }
-  .renewal-past   { color: #aaa; font-style: italic; }
-  .region-tag  { font-size: 10px; color: #666; background: #f0f0f0; padding: 1px 5px; border-radius: 4px; }
-  .no-csm-tag  { font-size: 10px; color: #854F0B; background: #FAEEDA; padding: 1px 5px; border-radius: 4px; }
-  .no-results  { text-align: center; padding: 2rem; color: #999; font-size: 13px; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+  .page { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 36px; }
+  .top-left h1 { font-size: 22px; font-weight: 300; letter-spacing: -0.5px; }
+  .top-left h1 span { color: var(--accent); }
+  .top-left p { font-size: 12px; color: var(--text-muted); margin-top: 5px; font-family: 'DM Mono', monospace; }
+  .refresh-btn { display: flex; align-items: center; gap: 8px; font-family: 'DM Mono', monospace; font-size: 11px; padding: 9px 16px; border-radius: var(--radius); border: 1px solid var(--border2); background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.2s; letter-spacing: 0.05em; text-transform: uppercase; }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .refresh-btn svg { width: 13px; height: 13px; }
+  .refresh-btn.spinning svg { animation: spin 0.8s linear infinite; }
+  .last-updated { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); margin-top: 6px; text-align: right; }
+  .metrics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 28px; }
+  .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 16px; }
+  .metric .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 10px; }
+  .metric .val { font-size: 22px; font-weight: 300; font-family: 'DM Mono', monospace; letter-spacing: -1px; }
+  .metric .sub { font-size: 11px; color: var(--text-dim); margin-top: 5px; }
+  .metric.accent-green { border-color: rgba(74,222,128,0.2); }
+  .metric.accent-green .val { color: var(--green); }
+  .metric.accent-red { border-color: rgba(248,113,113,0.2); }
+  .metric.accent-red .val { color: var(--red); }
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+  .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+  .chart-box h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 16px; font-weight: 400; }
+  .legend { display: flex; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+  .legend span { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
+  .leg-sq { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .bar-lbl { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-muted); width: 54px; text-align: right; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; border-radius: 3px; }
+  .bar-fill2 { height: 100%; border-radius: 3px; position: absolute; top: 0; left: 0; opacity: 0.5; }
+  .bar-val { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-dim); width: 70px; flex-shrink: 0; }
+  .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+  .table-header h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 400; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .controls input, .controls select { font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text); outline: none; transition: border-color 0.2s; }
+  .controls input { min-width: 200px; }
+  .controls input::placeholder { color: var(--text-dim); }
+  .controls input:focus, .controls select:focus { border-color: var(--border2); }
+  .controls select option { background: #1e1e1e; }
+  .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); font-size: 10px; font-weight: 400; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); background: var(--surface2); font-family: 'DM Mono', monospace; }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--border); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  td.mono { font-family: 'DM Mono', monospace; font-size: 11px; }
+  .days-crit { color: var(--red); font-weight: 500; }
+  .days-warn { color: var(--amber); font-weight: 500; }
+  .days-past { color: var(--text-dim); font-style: italic; }
+  .health-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
+  .h-high { background: var(--green); }
+  .h-med  { background: var(--amber); }
+  .h-low  { background: var(--red); }
+  .h-pend { background: var(--text-dim); }
+  .health-cell { display: flex; align-items: center; }
+  .error-banner { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 20px; font-size: 12px; color: var(--red); font-family: 'DM Mono', monospace; display: none; }
+  .empty { text-align: center; color: var(--text-dim); padding: 32px; font-size: 12px; font-family: 'DM Mono', monospace; }
+  #loading { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; transition: opacity 0.4s; }
+  #loading.hidden { opacity: 0; pointer-events: none; }
+  .spin-ring { width: 28px; height: 28px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 14px; }
+  #loading p { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .fade-in { animation: fadeIn 0.4s ease both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 900px) { .metrics { grid-template-columns: repeat(3,1fr); } .charts { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) { .metrics { grid-template-columns: 1fr 1fr; } .top { flex-direction: column; gap: 14px; } }
 </style>
 </head>
 <body>
-<h1>Customer Health Dashboard <span class="updated">Data as of 28 May 2026</span></h1>
 
-<div class="metrics" id="metrics"></div>
-<div class="filters">
-  <label>Health:</label>
-  <select id="fHealth">
-    <option value="">All</option>
-    <option value="High">High</option>
-    <option value="Medium">Medium</option>
-    <option value="Low">Low</option>
-    <option value="None">No score</option>
-  </select>
-  <label>Region:</label>
-  <select id="fRegion"><option value="">All</option></select>
-  <label>CSM:</label>
-  <select id="fCsm">
-    <option value="">All</option>
-    <option value="__none__">No CSM</option>
-  </select>
-  <label>Contact:</label>
-  <select id="fContact">
-    <option value="">All</option>
-    <option value="overdue">Overdue (90+ days)</option>
-    <option value="warn">Due soon (30–90 days)</option>
-    <option value="ok">Recent (&lt; 30 days)</option>
-    <option value="none">Never recorded</option>
-  </select>
-  <label>Renewal:</label>
-  <select id="fRenewal">
-    <option value="">All</option>
-    <option value="overdue">Past due</option>
-    <option value="urgent">Within 30 days</option>
-    <option value="soon">Within 90 days</option>
-  </select>
-  <input type="text" id="fSearch" placeholder="Search account or contract…" />
+<div id="loading">
+  <div class="spin-ring"></div>
+  <p>Loading pipeline data…</p>
 </div>
 
-<div style="overflow-x:auto;">
-  <table>
-    <thead>
-      <tr>
-        <th onclick="sortBy('account')">Account <span style="opacity:.4;">↕</span></th>
-        
-        <th onclick="sortBy('csm')">CSM <span style="opacity:.4;">↕</span></th>
-        <th onclick="sortBy('region')">Region <span style="opacity:.4;">↕</span></th>
-        <th onclick="sortBy('health')">Health <span style="opacity:.4;">↕</span></th>
-        <th onclick="sortBy('lastContact')">Last Contact <span style="opacity:.4;">↕</span></th>
-        <th onclick="sortBy('daysSince')">Days Since <span style="opacity:.4;">↕</span></th>
-        <th onclick="sortBy('daysToContractEnd')">Days To Contract End <span style="opacity:.4;">↕</span></th>
-        <th onclick="sortBy('nextInvRenewal')">Next Inv. Renewal <span style="opacity:.4;">↕</span></th>
-        <th onclick="sortBy('contractEnd')">Contract End <span style="opacity:.4;">↕</span></th>
-        <th onclick="sortBy('contractValue')">Value (USD) <span style="opacity:.4;">↕</span></th>
-      </tr>
-    </thead>
-    <tbody id="tbody"></tbody>
-  </table>
-  <div id="no-results" class="no-results" style="display:none;">No accounts match your filters.</div>
+<div class="page">
+  <div class="top">
+    <div class="top-left">
+      <h1>Contract <span>renewal pipeline</span></h1>
+      <p id="subtitle">Loading…</p>
+    </div>
+    <div style="text-align:right">
+      <button class="refresh-btn" id="refreshBtn" onclick="doRefresh()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+          <path d="M21 3v5h-5"/>
+          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+          <path d="M8 16H3v5"/>
+        </svg>
+        Refresh
+      </button>
+      <div class="last-updated" id="lastUpdated"></div>
+    </div>
+  </div>
+
+  <div class="error-banner" id="errorBanner"></div>
+  <div class="metrics" id="metrics"></div>
+
+  <div class="charts">
+    <div class="chart-box">
+      <h3>Monthly pipeline vs weighted (£k)</h3>
+      <div class="legend">
+        <span><span class="leg-sq" style="background:#60a5fa"></span>Contract value</span>
+        <span><span class="leg-sq" style="background:#4ade80"></span>Weighted forecast</span>
+      </div>
+      <div id="monthly-bars"></div>
+    </div>
+    <div class="chart-box">
+      <h3>Pipeline by health score</h3>
+      <div class="legend">
+        <span><span class="leg-sq" style="background:#4ade80"></span>High</span>
+        <span><span class="leg-sq" style="background:#fbbf24"></span>Medium</span>
+        <span><span class="leg-sq" style="background:#f87171"></span>Low</span>
+        <span><span class="leg-sq" style="background:#3d3d3d"></span>Pending</span>
+      </div>
+      <div id="health-bars"></div>
+    </div>
+  </div>
+
+  <div class="table-header">
+    <h2 id="row-count">All contracts</h2>
+    <div class="controls">
+      <input type="text" id="search" placeholder="Search account…" oninput="renderTable()">
+      <select id="fh" onchange="renderTable()">
+        <option value="">All health</option>
+        <option value="High">High</option>
+        <option value="Medium">Medium</option>
+        <option value="Low">Low</option>
+        <option value="Pending">Pending</option>
+      </select>
+      <select id="so" onchange="renderTable()">
+        <option value="days">Sort: days left</option>
+        <option value="val">Sort: value ↓</option>
+        <option value="name">Sort: name A–Z</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th style="width:30%">Account</th>
+        <th style="width:12%">Contract end</th>
+        <th style="width:12%">Next renewal</th>
+        <th style="width:7%">Days</th>
+        <th style="width:14%">Contract value</th>
+        <th style="width:14%">Weighted</th>
+        <th style="width:11%">Health</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
-const raw = [
-  {account:"District Cover, Inc.",contractNo:"00000256",csm:"Adi Toppol",region:"Americas",health:"Low",lastContact:null,nextRenewal:"23/01/2026",nextInvRenewal:"23/01/2026",contractEnd:"23/07/2026",contractValue:22800},
-  {account:"Orion MGA",contractNo:"00000195",csm:"Sammie Edwards",region:"Americas",health:"Medium",lastContact:null,nextRenewal:"15/06/2026",nextInvRenewal:"15/06/2026",contractEnd:"15/06/2026",contractValue:30240},
-  {account:"Pathpoint",contractNo:"00000197",csm:"Sammie Edwards",region:"Americas",health:"High",lastContact:null,nextRenewal:"19/07/2026",nextInvRenewal:"19/07/2026",contractEnd:"19/01/2026",contractValue:142800},
-  {account:"Energetic Insurance",contractNo:"00000113",csm:"Sammie Edwards",region:"Americas",health:"High",lastContact:null,nextRenewal:"09/12/2026",nextInvRenewal:"09/12/2026",contractEnd:"09/12/2026",contractValue:17136},
-  {account:"Atlantic Global Risk LLC",contractNo:"00000233",csm:"Sammie Edwards",region:"Americas",health:"High",lastContact:null,nextRenewal:"29/06/2026",nextInvRenewal:"29/06/2026",contractEnd:"29/06/2026",contractValue:273609},
-  {account:"Isaac Gancfreid Insurance - IGA",contractNo:"00000124",csm:"Sammie Edwards",region:"Americas",health:"High",lastContact:null,nextRenewal:"29/06/2026",nextInvRenewal:"29/06/2026",contractEnd:"29/06/2027",contractValue:7200},
-  {account:"Howden International Pte. Ltd - Singapore",contractNo:"00000180",csm:"Rinat Tsadok Shimron",region:"APAC",health:"High",lastContact:null,nextRenewal:"07/08/2026",nextInvRenewal:"07/08/2026",contractEnd:"07/08/2026",contractValue:102748},
-  {account:"Howden Insurance Brokers Sdn. Bhd (MY)",contractNo:"00000183",csm:"Rinat Tsadok Shimron",region:"APAC",health:"High",lastContact:null,nextRenewal:"07/08/2026",nextInvRenewal:"07/08/2026",contractEnd:"07/08/2029",contractValue:146136},
-  {account:"Howden Hong Kong",contractNo:"00000182",csm:"Rinat Tsadok Shimron",region:"APAC",health:"High",lastContact:null,nextRenewal:"07/08/2026",nextInvRenewal:"07/08/2026",contractEnd:"07/08/2026",contractValue:77801},
-  {account:"M&N Insurance Service Limited",contractNo:"00000147",csm:"Tamar Fiss",region:"EMEA",health:"Low",lastContact:"22/05/2026",nextRenewal:"13/08/2026",nextInvRenewal:"13/08/2026",contractEnd:"12/07/2026",contractValue:62498},
-  {account:"Miles Smith - Specialist Risk Group Ltd (SRG)",contractNo:"00000185",csm:"Tamar Fiss",region:"EMEA",health:"Low",lastContact:"22/05/2026",nextRenewal:"30/09/2026",nextInvRenewal:"30/09/2026",contractEnd:"02/10/2025",contractValue:72648},
-  {account:"Howden Iberia",contractNo:"00000154",csm:"Rinat Tsadok Shimron",region:"EMEA",health:"Low",lastContact:null,nextRenewal:"31/10/2026",nextInvRenewal:"31/10/2026",contractEnd:"18/09/2033",contractValue:50336},
-  {account:"New Dawn Risk Group Limited",contractNo:"00000212",csm:"Tamar Fiss",region:"EMEA",health:"Medium",lastContact:"22/05/2026",nextRenewal:"01/01/2027",nextInvRenewal:"01/01/2027",contractEnd:"31/05/2026",contractValue:182064},
-  {account:"Matrix (Howden Greece)",contractNo:"00000184",csm:"Rinat Tsadok Shimron",region:"EMEA",health:"Medium",lastContact:null,nextRenewal:"18/09/2026",nextInvRenewal:"18/09/2026",contractEnd:"18/09/2026",contractValue:139888},
-  {account:"Hettle Andrews & Assoc. Ltd.",contractNo:"00000123",csm:"Tamar Fiss",region:"EMEA",health:"Medium",lastContact:"22/05/2026",nextRenewal:"29/06/2026",nextInvRenewal:"29/06/2026",contractEnd:"30/04/2028",contractValue:103273},
-  {account:"Harbour Underwriting - HUL",contractNo:"00000190",csm:"Tamar Fiss",region:"EMEA",health:"High",lastContact:"22/05/2026",nextRenewal:"04/02/2026",nextInvRenewal:"04/02/2026",contractEnd:"04/02/2027",contractValue:53147},
-  {account:"Howden Belgium",contractNo:"00000194",csm:"Rinat Tsadok Shimron",region:"EMEA",health:"High",lastContact:null,nextRenewal:"31/05/2026",nextInvRenewal:"31/05/2026",contractEnd:"31/05/2027",contractValue:52900},
-  {account:"Howden Group Holdings Limited",contractNo:"00000164",csm:"Ofer Akrish",region:"EMEA",health:"High",lastContact:null,nextRenewal:"26/04/2026",nextInvRenewal:"26/04/2026",contractEnd:"04/03/2033",contractValue:1374618},
-  {account:"Howden Turkey",contractNo:"00000218",csm:"Rinat Tsadok Shimron",region:"EMEA",health:"High",lastContact:null,nextRenewal:"28/09/2026",nextInvRenewal:"28/09/2026",contractEnd:"28/09/2030",contractValue:39000},
-  {account:"Ergo Travel Insurance",contractNo:"00000262",csm:"Tamar Fiss",region:"EMEA",health:"High",lastContact:"22/05/2026",nextRenewal:"31/12/2026",nextInvRenewal:"31/12/2026",contractEnd:"30/12/2028",contractValue:232728},
-  {account:"Ruby Finance LTD.",contractNo:"00000275",csm:null,region:null,health:null,lastContact:null,nextRenewal:"31/01/2026",nextInvRenewal:"31/01/2026",contractEnd:"22/01/2026",contractValue:42240},
-  {account:"James Richardson",contractNo:"00000134",csm:null,region:null,health:null,lastContact:null,nextRenewal:"17/03/2026",nextInvRenewal:"17/03/2026",contractEnd:"31/03/2026",contractValue:2880},
-  {account:"Allied Insurance Brokers - AIB",contractNo:"00000227",csm:null,region:null,health:null,lastContact:null,nextRenewal:"02/02/2026",nextInvRenewal:"02/02/2026",contractEnd:"02/02/2027",contractValue:121296},
-  {account:"Pierre Pierre Law",contractNo:"00000140",csm:null,region:null,health:null,lastContact:null,nextRenewal:"28/02/2026",nextInvRenewal:"28/02/2026",contractEnd:"28/02/2027",contractValue:3984},
-  {account:"Vodafone",contractNo:"00000133",csm:null,region:null,health:null,lastContact:null,nextRenewal:"28/02/2027",nextInvRenewal:"28/02/2027",contractEnd:"28/02/2027",contractValue:22588},
-  {account:"Hiscox Underwriting Group Services Limited",contractNo:"00000229",csm:null,region:null,health:null,lastContact:null,nextRenewal:"07/03/2026",nextInvRenewal:"07/03/2026",contractEnd:"07/03/2027",contractValue:1035238},
-  {account:"Arthur J. Gallagher (Singapore) Pte. Ltd.",contractNo:"00000266",csm:null,region:null,health:null,lastContact:null,nextRenewal:"08/04/2026",nextInvRenewal:"08/04/2026",contractEnd:"08/04/2027",contractValue:355202},
-  {account:"Capital Lynk",contractNo:"00000139",csm:null,region:null,health:null,lastContact:null,nextRenewal:"29/07/2026",nextInvRenewal:"29/07/2026",contractEnd:"31/05/2027",contractValue:432},
-  {account:"Further Underwriting International SLU",contractNo:"00000234",csm:null,region:null,health:null,lastContact:null,nextRenewal:"01/01/2027",nextInvRenewal:"01/01/2027",contractEnd:"29/06/2027",contractValue:376587},
-  {account:"CBC UK Limited",contractNo:"00000235",csm:null,region:null,health:null,lastContact:null,nextRenewal:"14/07/2026",nextInvRenewal:"14/07/2026",contractEnd:"14/07/2027",contractValue:260909},
-  {account:"HIBL",contractNo:"00000237",csm:null,region:null,health:null,lastContact:null,nextRenewal:"28/07/2026",nextInvRenewal:"28/07/2026",contractEnd:"28/07/2027",contractValue:2346754},
-  {account:"Tigermar",contractNo:"00000254",csm:null,region:null,health:null,lastContact:null,nextRenewal:"26/06/2026",nextInvRenewal:"26/06/2026",contractEnd:"26/06/2028",contractValue:133875},
-  {account:"Howden Group Holdings Ltd- Netherlands",contractNo:"00000261",csm:null,region:null,health:null,lastContact:null,nextRenewal:"29/09/2026",nextInvRenewal:"29/09/2026",contractEnd:"29/09/2028",contractValue:22656},
-  {account:"Mivtach Simon",contractNo:"00000251",csm:null,region:null,health:null,lastContact:null,nextRenewal:"26/03/2026",nextInvRenewal:"26/03/2026",contractEnd:"26/03/2028",contractValue:4104461},
-  {account:"Arthur J Gallagher Services (UK) Limited",contractNo:"00000236",csm:null,region:null,health:null,lastContact:null,nextRenewal:"19/07/2026",nextInvRenewal:"19/07/2026",contractEnd:"19/07/2029",contractValue:3397556},
-  {account:"Colmobil Insurance Ltd",contractNo:"00000277",csm:null,region:null,health:null,lastContact:null,nextRenewal:"30/03/2026",nextInvRenewal:"30/03/2026",contractEnd:"28/02/2030",contractValue:279426},
-  {account:"Bishop Street Underwriters",contractNo:"00000279",csm:null,region:null,health:null,lastContact:null,nextRenewal:"25/03/2026",nextInvRenewal:"25/03/2026",contractEnd:"25/03/2030",contractValue:799142},
-  {account:"H.W. Kaufman Groups International (UK)",contractNo:"00000281",csm:null,region:null,health:null,lastContact:null,nextRenewal:"20/05/2026",nextInvRenewal:"20/05/2026",contractEnd:"20/05/2030",contractValue:1054924},
-  {account:"Blueprint - Howden Group",contractNo:"00000247",csm:null,region:null,health:null,lastContact:null,nextRenewal:"28/01/2026",nextInvRenewal:"28/01/2026",contractEnd:"28/01/2033",contractValue:6720},
-  {account:"Howden Aus / NZ",contractNo:"00000252",csm:null,region:null,health:null,lastContact:null,nextRenewal:"29/04/2026",nextInvRenewal:"29/04/2026",contractEnd:"29/04/2033",contractValue:439818},
-  {account:"Egoom",contractNo:"00000141",csm:null,region:null,health:null,lastContact:null,nextRenewal:"26/11/2026",nextInvRenewal:"26/11/2026",contractEnd:"31/10/2026",contractValue:360},
-  {account:"BMC Israel",contractNo:"00000005",csm:"Gilad Shalom",region:"IL",health:"Low",lastContact:"20/11/2025",nextRenewal:"30/07/2026",nextInvRenewal:"30/07/2026",contractEnd:"30/07/2026",contractValue:0},
-  {account:"Rechasim",contractNo:"00000131",csm:"Roni Elovic",region:"IL",health:"Low",lastContact:"08/03/2026",nextRenewal:"25/07/2026",nextInvRenewal:"25/07/2026",contractEnd:"26/07/2026",contractValue:68040},
-  {account:"Or Insurance (ORR)",contractNo:"00000114",csm:"Shelly Shenkrait",region:"IL",health:"Low",lastContact:"19/02/2026",nextRenewal:"29/09/2026",nextInvRenewal:"29/09/2026",contractEnd:"29/09/2026",contractValue:30360},
-  {account:"Engel Insurance Ltd",contractNo:"00000220",csm:"Ola Lazar",region:"IL",health:"Medium",lastContact:"26/05/2026",nextRenewal:"04/10/2026",nextInvRenewal:"04/10/2026",contractEnd:"04/10/2026",contractValue:34632},
-  {account:"Lubit Insurance Agency ltd.",contractNo:"00000030",csm:"Shelly Shenkrait",region:"IL",health:"Medium",lastContact:"19/02/2026",nextRenewal:"29/12/2026",nextInvRenewal:"29/12/2026",contractEnd:"29/12/2026",contractValue:0},
-  {account:"Peltours Berman",contractNo:"00000203",csm:"Shelly Shenkrait",region:"IL",health:"Medium",lastContact:"17/02/2026",nextRenewal:"29/06/2026",nextInvRenewal:"29/06/2026",contractEnd:"11/05/2028",contractValue:42253},
-  {account:"Kavim Transportation",contractNo:"00000118",csm:"Roni Elovic",region:"IL",health:"Medium",lastContact:"08/03/2026",nextRenewal:"10/06/2026",nextInvRenewal:"10/06/2026",contractEnd:"10/06/2027",contractValue:27721},
-  {account:"Howden Israel Surety (Guaranties)",contractNo:"00000167",csm:"Maayan Zlatopolsky",region:"IL",health:"Medium",lastContact:"11/03/2026",nextRenewal:"16/06/2026",nextInvRenewal:"16/06/2026",contractEnd:"17/06/2028",contractValue:16488},
-  {account:"LHD - Nova Insurance Agency",contractNo:"00000160",csm:"Roni Elovic",region:"IL",health:"High",lastContact:"08/03/2026",nextRenewal:"07/08/2026",nextInvRenewal:"07/08/2026",contractEnd:"30/04/2029",contractValue:51182},
-  {account:"Meroz",contractNo:"00000150",csm:"Shelly Shenkrait",region:"IL",health:"High",lastContact:"19/02/2026",nextRenewal:"31/03/2026",nextInvRenewal:"31/03/2026",contractEnd:"10/07/2026",contractValue:20284},
-  {account:"Kali Group",contractNo:"00000157",csm:"Roni Elovic",region:"IL",health:"High",lastContact:"08/03/2026",nextRenewal:"30/03/2026",nextInvRenewal:"30/03/2026",contractEnd:"31/01/2028",contractValue:494325},
-  {account:"Misgav",contractNo:"00000119",csm:"Sapir Masuri",region:"IL",health:"High",lastContact:"09/04/2026",nextRenewal:"20/06/2026",nextInvRenewal:"20/06/2026",contractEnd:"21/06/2026",contractValue:182671},
-  {account:"Shamir-Horowitz Insurance Agency",contractNo:"00000008",csm:"Shelly Shenkrait",region:"IL",health:"High",lastContact:"10/02/2026",nextRenewal:"29/12/2026",nextInvRenewal:"29/12/2026",contractEnd:"29/12/2026",contractValue:0},
-  {account:"Marsh Israel - Insurance",contractNo:"00000151",csm:"Sapir Masuri",region:"IL",health:"High",lastContact:"10/11/2025",nextRenewal:"31/08/2026",nextInvRenewal:"31/08/2026",contractEnd:"16/07/2033",contractValue:77274},
-  {account:"Insurance Center (Merkaz Habituah) MHB",contractNo:"00000122",csm:"Maayan Zlatopolsky",region:"IL",health:"High",lastContact:"11/03/2026",nextRenewal:"29/09/2026",nextInvRenewal:"29/09/2026",contractEnd:"29/09/2027",contractValue:40764},
-  {account:"Howden Israel",contractNo:"00000163",csm:"Maayan Zlatopolsky",region:"IL",health:"High",lastContact:"05/04/2026",nextRenewal:"31/03/2026",nextInvRenewal:"31/03/2026",contractEnd:"04/03/2033",contractValue:836443},
-  {account:"Tamuz Insurance Group",contractNo:"00000226",csm:"Sapir Masuri",region:"IL",health:"High",lastContact:"13/04/2026",nextRenewal:"28/03/2026",nextInvRenewal:"28/03/2026",contractEnd:"29/03/2027",contractValue:98970},
-  {account:"Peltours Insurance",contractNo:"00000178",csm:"Shelly Shenkrait",region:"IL",health:"High",lastContact:"17/02/2026",nextRenewal:"29/06/2026",nextInvRenewal:"29/06/2026",contractEnd:"29/06/2028",contractValue:263629},
-  {account:"Landau Yuval",contractNo:"00000219",csm:"Ola Lazar",region:"IL",health:"High",lastContact:"26/05/2026",nextRenewal:"11/09/2026",nextInvRenewal:"11/09/2026",contractEnd:"01/09/2027",contractValue:69681},
-  {account:"Cnaan Insurance Group",contractNo:"00000104",csm:"Maayan Zlatopolsky",region:"IL",health:"High",lastContact:"06/04/2026",nextRenewal:"30/11/2026",nextInvRenewal:"30/11/2026",contractEnd:"30/11/2028",contractValue:104088},
-  {account:"UMI Insurance",contractNo:"00000187",csm:"Maayan Zlatopolsky",region:"IL",health:"High",lastContact:"06/04/2026",nextRenewal:"18/12/2026",nextInvRenewal:"18/12/2026",contractEnd:"17/12/2026",contractValue:55212},
-  {account:"IBI Investment House (Four Seasons)",contractNo:"00000165",csm:"Maayan Zlatopolsky",region:"IL",health:"High",lastContact:"05/04/2026",nextRenewal:"01/04/2026",nextInvRenewal:"01/04/2026",contractEnd:"16/10/2030",contractValue:55974},
-  {account:"Yoram Zilberman Insurance Agency Ltd",contractNo:"00000106",csm:"Ola Lazar",region:"IL",health:"High",lastContact:"26/05/2026",nextRenewal:"29/09/2026",nextInvRenewal:"29/09/2026",contractEnd:"29/09/2028",contractValue:180096},
-  {account:"Ayalon Neemanim Insurance Agency Ltd",contractNo:"00000116",csm:"Sapir Masuri",region:"IL",health:"High",lastContact:"13/04/2026",nextRenewal:"26/03/2026",nextInvRenewal:"26/03/2026",contractEnd:"30/12/2027",contractValue:288873},
-  {account:"Napa Insurance Agency",contractNo:"00000102",csm:"Maayan Zlatopolsky",region:"IL",health:"High",lastContact:"06/04/2026",nextRenewal:"31/01/2026",nextInvRenewal:"31/01/2026",contractEnd:"28/01/2032",contractValue:338416},
-  {account:"Accord Insurance Agency (Kesh)",contractNo:"00000142",csm:"Sapir Masuri",region:"IL",health:"High",lastContact:"08/03/2026",nextRenewal:"01/01/2027",nextInvRenewal:"01/01/2027",contractEnd:"02/12/2027",contractValue:13568},
-  {account:"ZIM",contractNo:"00000110",csm:"Ola Lazar",region:"IL",health:"High",lastContact:"26/05/2026",nextRenewal:"05/04/2026",nextInvRenewal:"05/04/2026",contractEnd:"13/04/2027",contractValue:121032},
-  {account:"Maccabi Healthcare Services",contractNo:"00000033",csm:"Shelly Shenkrait",region:"IL",health:"High",lastContact:"22/01/2026",nextRenewal:"31/12/2026",nextInvRenewal:"31/12/2026",contractEnd:"31/12/2026",contractValue:0},
-  {account:"FRC - Friedman Roi",contractNo:"00000126",csm:"Ola Lazar",region:"IL",health:"High",lastContact:"26/05/2026",nextRenewal:"28/03/2026",nextInvRenewal:"28/03/2026",contractEnd:"29/03/2027",contractValue:51840},
-  {account:"Anat Rapaport Insurance Agency",contractNo:"00000120",csm:"Ola Lazar",region:"IL",health:"High",lastContact:"26/05/2026",nextRenewal:"05/01/2026",nextInvRenewal:"05/01/2026",contractEnd:"19/12/2028",contractValue:20389},
-  {account:"Orlan Insurance Agency - Shaham Insurance Agency (1977) LTD.",contractNo:"00000148",csm:"Ola Lazar",region:"IL",health:"High",lastContact:"26/05/2026",nextRenewal:"31/01/2026",nextInvRenewal:"31/01/2026",contractEnd:"31/01/2028",contractValue:61622},
-  {account:"WTW WILLIS TOWERS WATSON ISRAEL (Leaderim Insurance Agency)",contractNo:"00000149",csm:"Sapir Masuri",region:"IL",health:"High",lastContact:"13/04/2026",nextRenewal:"29/10/2026",nextInvRenewal:"29/10/2026",contractEnd:"04/09/2026",contractValue:76620},
-  {account:"Gil Vardi Insurance Company",contractNo:"00000156",csm:"Roni Elovic",region:"IL",health:"High",lastContact:"08/03/2026",nextRenewal:"30/06/2026",nextInvRenewal:"30/06/2026",contractEnd:"02/05/2033",contractValue:57240},
-  {account:"El Al",contractNo:"00000159",csm:"Ola Lazar",region:"IL",health:"High",lastContact:"26/05/2026",nextRenewal:"08/03/2026",nextInvRenewal:"08/03/2026",contractEnd:"28/01/2028",contractValue:15000},
-  {account:"Leumi Card - Max",contractNo:"00000186",csm:"Shelly Shenkrait",region:"IL",health:"High",lastContact:null,nextRenewal:"06/11/2026",nextInvRenewal:"06/11/2026",contractEnd:"06/11/2026",contractValue:15840},
-  {account:"Strauss",contractNo:"00000146",csm:"Roni Elovic",region:"IL",health:"High",lastContact:"16/12/2025",nextRenewal:"24/10/2026",nextInvRenewal:"24/10/2026",contractEnd:"21/10/2026",contractValue:6480},
-  {account:"Pay-it Ltd",contractNo:"00000127",csm:"Shelly Shenkrait",region:"IL",health:"High",lastContact:"22/02/2026",nextRenewal:"26/03/2026",nextInvRenewal:"26/03/2026",contractEnd:"27/03/2026",contractValue:45600},
-  {account:"Ramot",contractNo:"00000109",csm:"Shelly Shenkrait",region:"IL",health:"High",lastContact:"19/02/2026",nextRenewal:"14/05/2026",nextInvRenewal:"14/05/2026",contractEnd:"14/05/2028",contractValue:221555},
-  {account:"Amnon Gur",contractNo:"00000117",csm:"Sapir Masuri",region:"IL",health:"High",lastContact:"07/04/2026",nextRenewal:"11/02/2026",nextInvRenewal:"11/02/2026",contractEnd:"11/02/2028",contractValue:1453995},
-  {account:"Boaz Litay",contractNo:"00000108",csm:"Maayan Zlatopolsky",region:"IL",health:"High",lastContact:"08/03/2026",nextRenewal:"14/07/2026",nextInvRenewal:"14/07/2026",contractEnd:"14/07/2026",contractValue:15120},
-  {account:"Madanes Insurance Agency",contractNo:"00000250",csm:"Maayan Zlatopolsky",region:"IL",health:"High",lastContact:"05/04/2026",nextRenewal:"14/03/2026",nextInvRenewal:"14/03/2026",contractEnd:"14/03/2028",contractValue:1025255},
-  {account:"Surance.io",contractNo:"00000179",csm:"Ola Lazar",region:"IL",health:"High",lastContact:"26/05/2026",nextRenewal:"18/05/2026",nextInvRenewal:"18/05/2026",contractEnd:"04/07/2027",contractValue:23899},
-  {account:"Isracard",contractNo:"00000205",csm:"Shelly Shenkrait",region:"IL",health:"High",lastContact:"04/02/2026",nextRenewal:"03/02/2026",nextInvRenewal:"03/02/2026",contractEnd:"03/02/2027",contractValue:90000},
-  {account:"Allied - Champion Motors",contractNo:"00000172",csm:"Ola Lazar",region:"IL",health:"High",lastContact:"26/05/2026",nextRenewal:"25/01/2026",nextInvRenewal:"25/01/2026",contractEnd:"28/11/2032",contractValue:10920},
-  {account:"Bar Geffen",contractNo:"00000208",csm:"Sapir Masuri",region:"IL",health:"High",lastContact:"13/04/2026",nextRenewal:"14/03/2026",nextInvRenewal:"14/03/2026",contractEnd:"07/03/2029",contractValue:15840},
-  {account:"Surance USA",contractNo:"00000210",csm:"Ola Lazar",region:"IL",health:"High",lastContact:"26/05/2026",nextRenewal:"18/05/2026",nextInvRenewal:"18/05/2026",contractEnd:"18/11/2027",contractValue:1080},
-  {account:"Madanes Advanced Healthcare",contractNo:"00000176",csm:"Maayan Zlatopolsky",region:"IL",health:"High",lastContact:"11/03/2026",nextRenewal:"31/03/2026",nextInvRenewal:"31/03/2026",contractEnd:"25/03/2026",contractValue:26473},
-  {account:"Metropoline",contractNo:"00000259",csm:"Shelly Shenkrait",region:"IL",health:"High",lastContact:"12/04/2026",nextRenewal:"31/10/2026",nextInvRenewal:"31/10/2026",contractEnd:"31/10/2026",contractValue:30240},
-  {account:"Rami Levi",contractNo:"00000288",csm:"Ola Lazar",region:"IL",health:"High",lastContact:"26/05/2026",nextRenewal:"17/02/2027",nextInvRenewal:"17/02/2027",contractEnd:"17/02/2027",contractValue:25348},
-  {account:"PLAN A",contractNo:"00000287",csm:"Ola Lazar",region:"IL",health:"High",lastContact:"26/05/2026",nextRenewal:"30/06/2026",nextInvRenewal:"30/06/2026",contractEnd:"30/06/2028",contractValue:65030},
-];
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbykqCyvPjt2EIislOezWXt21cBT8w_E8fKwyECAGq3R2knGFSXiSQ8vffMk2j-1A0UB/exec';
+const WEIGHT = { High: 0.9, Medium: 0.75, Low: 0.4, Pending: 0 };
+let DATA = [];
 
-const today = new Date(2026, 4, 28);
-function parseDate(s) { if (!s) return null; const [d,m,y]=s.split('/'); return new Date(+y,+m-1,+d); }
-function daysSince(s) { if (!s) return null; return Math.floor((today - parseDate(s)) / 86400000); }
-function daysTo(s)    { if (!s) return null; return Math.floor((parseDate(s) - today) / 86400000); }
-function contactClass(d) { if(d===null)return'days-none'; if(d>=90)return'days-stale'; if(d>=30)return'days-warn'; return'days-ok'; }
-function healthOrder(h) { return h==='Low'?0:h==='Medium'?1:h==='High'?2:-1; }
+// Apps Script supports JSONP — use that to avoid CORS
+function loadData() {
+  return new Promise((resolve, reject) => {
+    const cb = '_asCb_' + Date.now();
+    const url = APPS_SCRIPT_URL + '?callback=' + cb + '&t=' + Date.now();
 
-function renewalDateCell(s) {
-  if (!s) return '<span style="color:#bbb;">—</span>';
-  const d = daysTo(s);
-  if (d < 0)  return `<span class="renewal-past">${s} <span style="font-size:10px;">(past)</span></span>`;
-  if (d <= 30) return `<span class="renewal-urgent">${s}</span>`;
-  if (d <= 90) return `<span class="renewal-soon">${s}</span>`;
-  return `<span class="renewal-ok">${s}</span>`;
-}
+    const timer = setTimeout(() => {
+      delete window[cb];
+      script.remove();
+      reject(new Error('Request timed out. Make sure the Apps Script is deployed as "Anyone" access.'));
+    }, 15000);
 
-function renewalDaysCell(s) {
-  if (!s) return '<span style="color:#bbb;">—</span>';
-  const d = daysTo(s);
-  if (d < 0)  return `<span class="renewal-past">${Math.abs(d)}d overdue</span>`;
-  if (d <= 30) return `<span class="renewal-urgent">${d}d</span>`;
-  if (d <= 90) return `<span class="renewal-soon">${d}d</span>`;
-  return `<span class="renewal-ok">${d}d</span>`;
-}
+    window[cb] = (raw) => {
+      clearTimeout(timer);
+      delete window[cb];
+      script.remove();
+      try {
+        // raw may be array directly or wrapped
+        const arr = Array.isArray(raw) ? raw : raw.data || [];
+        const today = new Date(); today.setHours(0,0,0,0);
+        const result = arr
+          .filter(r => r.name && r.name !== 'Account Name')
+          .map(r => {
+            const healthRaw = String(r.health || '').trim();
+            const health = ['High','Medium','Low'].includes(healthRaw) ? healthRaw : 'Pending';
+            // Recalculate days from today using the renewal date string dd/MM/yyyy
+            let days = 0;
+            if (r.renewal) {
+              const p = r.renewal.split('/');
+              if (p.length === 3) {
+                const rDate = new Date(+p[2], +p[1]-1, +p[0]);
+                days = Math.round((rDate - today) / 86400000);
+              }
+            }
+            const val = parseFloat(String(r.val||0).replace(/[^0-9.-]/g,'')) || 0;
+            return { name: r.name, end: r.end||'', renewal: r.renewal||'', days, val, health };
+          })
+          .filter(d => d.name);
+        resolve(result);
+      } catch(e) { reject(e); }
+    };
 
-function invRenewalCell(s) {
-  if (!s) return '<span style="color:#bbb;">—</span>';
-  const d = daysTo(s);
-  if (d < 0)  return `<span style="color:#aaa;font-style:italic;font-size:11px;">${s}</span>`;
-  if (d <= 30) return `<span style="color:#E24B4A;font-weight:500;font-size:11px;">${s}</span>`;
-  if (d <= 90) return `<span style="color:#BA7517;font-weight:500;font-size:11px;">${s}</span>`;
-  return `<span style="color:#888;font-size:11px;">${s}</span>`;
-}
-
-let sortCol='daysToContractEnd', sortDir=1;
-function sortBy(col) { if(sortCol===col) sortDir*=-1; else{sortCol=col;sortDir=1;} render(); }
-
-function getFiltered() {
-  const health  = document.getElementById('fHealth').value;
-  const region  = document.getElementById('fRegion').value;
-  const csm     = document.getElementById('fCsm').value;
-  const contact = document.getElementById('fContact').value;
-  const renewal = document.getElementById('fRenewal').value;
-  const search  = document.getElementById('fSearch').value.toLowerCase();
-
-  return raw.filter(r => {
-    if(health==='None'&&r.health) return false;
-    if(health&&health!=='None'&&r.health!==health) return false;
-    if(region&&(r.region||'')!==region) return false;
-    if(csm==='__none__'&&r.csm) return false;
-    else if(csm&&csm!=='__none__'&&r.csm!==csm) return false;
-    const ds=daysSince(r.lastContact);
-    if(contact==='overdue'&&!(ds!==null&&ds>=90)) return false;
-    if(contact==='warn'&&!(ds!==null&&ds>=30&&ds<90)) return false;
-    if(contact==='ok'&&!(ds!==null&&ds<30)) return false;
-    if(contact==='none'&&ds!==null) return false;
-    const dt=daysTo(r.contractEnd);
-    if(renewal==='overdue'&&!(dt!==null&&dt<0)) return false;
-    if(renewal==='urgent'&&!(dt!==null&&dt>=0&&dt<=30)) return false;
-    if(renewal==='soon'&&!(dt!==null&&dt>=0&&dt<=90)) return false;
-    if(search&&!r.account.toLowerCase().includes(search)&&!(r.contractNo||'').includes(search)) return false;
-    return true;
-  }).sort((a,b)=>{
-    let av,bv;
-    if(sortCol==='health')        {av=healthOrder(a.health);bv=healthOrder(b.health);}
-    else if(sortCol==='daysSince'){av=daysSince(a.lastContact)??9999;bv=daysSince(b.lastContact)??9999;}
-    else if(sortCol==='daysToContractEnd'){av=daysTo(a.contractEnd)??9999;bv=daysTo(b.contractEnd)??9999;}
-    else if(sortCol==='nextInvRenewal'){av=parseDate(a.nextInvRenewal)||new Date(9999,0);bv=parseDate(b.nextInvRenewal)||new Date(9999,0);}
-    else if(sortCol==='contractEnd')  {av=parseDate(a.contractEnd)||new Date(9999,0);bv=parseDate(b.contractEnd)||new Date(9999,0);}
-    else if(sortCol==='lastContact')  {av=parseDate(a.lastContact)||new Date(0);bv=parseDate(b.lastContact)||new Date(0);}
-    else if(sortCol==='contractValue'){av=a.contractValue;bv=b.contractValue;}
-    else{av=(a[sortCol]||'').toLowerCase();bv=(b[sortCol]||'').toLowerCase();}
-    return av<bv?-sortDir:av>bv?sortDir:0;
+    const script = document.createElement('script');
+    script.src = url;
+    script.onerror = () => {
+      clearTimeout(timer);
+      delete window[cb];
+      reject(new Error('Failed to reach the Apps Script URL. Check it is deployed and access is set to "Anyone".'));
+    };
+    document.head.appendChild(script);
   });
 }
 
-function renderMetrics(data) {
-  const renewingSoon = data.filter(r=>{ const d=daysTo(r.contractEnd); return d!==null&&d>=0&&d<=90; }).length;
-  document.getElementById('metrics').innerHTML=`
-    <div class="metric"><div class="metric-label">Total Accounts</div><div class="metric-val">${data.length}</div></div>
-    <div class="metric"><div class="metric-label">No CSM Assigned</div><div class="metric-val amber">${data.filter(r=>!r.csm).length}</div></div>
-    <div class="metric"><div class="metric-label">Low Health</div><div class="metric-val red">${data.filter(r=>r.health==='Low').length}</div></div>
-    <div class="metric"><div class="metric-label">Renewing ≤90 Days</div><div class="metric-val amber">${renewingSoon}</div></div>`;
+// Helpers
+function fmt(n) { return '£' + Math.round(n).toLocaleString(); }
+function fmtDate(s) {
+  if (!s) return '—';
+  const p = s.split('/');
+  if (p.length !== 3) return s;
+  return p[0] + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p[1]-1] + ' ' + p[2].slice(-2);
+}
+function wt(d) { return Math.round(d.val * (WEIGHT[d.health] ?? 0)); }
+
+// Render
+function renderMetrics() {
+  const totalVal = DATA.reduce((a,d)=>a+d.val,0);
+  const totalWt  = DATA.reduce((a,d)=>a+wt(d),0);
+  const lowVal   = DATA.filter(d=>d.health==='Low').reduce((a,d)=>a+d.val,0);
+  const due90    = DATA.filter(d=>d.days>=0&&d.days<=90).reduce((a,d)=>a+d.val,0);
+  const highCt   = DATA.filter(d=>d.health==='High').length;
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric fade-in"><div class="lbl">Total pipeline</div><div class="val">${fmt(totalVal)}</div><div class="sub">${DATA.length} contracts</div></div>
+    <div class="metric fade-in" style="animation-delay:.05s"><div class="lbl">Weighted forecast</div><div class="val">${fmt(totalWt)}</div><div class="sub">Confidence-adjusted</div></div>
+    <div class="metric fade-in" style="animation-delay:.1s"><div class="lbl">Due ≤ 90 days</div><div class="val">${fmt(due90)}</div><div class="sub">${DATA.filter(d=>d.days>=0&&d.days<=90).length} contracts</div></div>
+    <div class="metric accent-red fade-in" style="animation-delay:.15s"><div class="lbl">Low health value</div><div class="val">${fmt(lowVal)}</div><div class="sub">${DATA.filter(d=>d.health==='Low').length} accounts</div></div>
+    <div class="metric accent-green fade-in" style="animation-delay:.2s"><div class="lbl">High health</div><div class="val">${highCt}</div><div class="sub">${DATA.length?Math.round(highCt/DATA.length*100):0}% of accounts</div></div>
+  `;
 }
 
-function render() {
-  const data = getFiltered();
-  renderMetrics(data);
-  const noRes = document.getElementById('no-results');
-  if (!data.length) { document.getElementById('tbody').innerHTML=''; noRes.style.display=''; return; }
-  noRes.style.display='none';
-  document.getElementById('tbody').innerHTML = data.map(r => {
-    const ds = daysSince(r.lastContact);
-    const cc = contactClass(ds);
-    const hb = r.health==='High' ? `<span class="badge badge-high"><span class="dot dot-high"></span>High</span>`
-             : r.health==='Medium' ? `<span class="badge badge-medium"><span class="dot dot-medium"></span>Medium</span>`
-             : r.health==='Low'    ? `<span class="badge badge-low"><span class="dot dot-low"></span>Low</span>`
-             : `<span class="badge badge-none">—</span>`;
-    const short = r.account.length>32 ? r.account.slice(0,30)+'…' : r.account;
-    return `<tr class="${!r.csm?'unassigned':''}">
-      <td title="${r.account}" style="max-width:195px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${short}</td>
-      <td style="white-space:nowrap;font-size:11px;">${r.csm||'<span class="no-csm-tag">Unassigned</span>'}</td>
-      <td>${r.region?`<span class="region-tag">${r.region}</span>`:'<span style="color:#bbb;">—</span>'}</td>
-      <td>${hb}</td>
-      <td style="white-space:nowrap;color:#888;font-size:11px;">${r.lastContact||'<span style="font-style:italic;color:#bbb;">—</span>'}</td>
-      <td style="font-size:11px;">${ds===null?'<span class="days-none">—</span>':`<span class="${cc}">${ds}d ago</span>`}</td>
-      <td style="font-size:11px;">${renewalDaysCell(r.contractEnd)}</td>
-      <td style="white-space:nowrap;">${invRenewalCell(r.nextInvRenewal)}</td>
-      <td style="white-space:nowrap;color:#888;font-size:11px;">${r.contractEnd||'—'}</td>
-      <td style="white-space:nowrap;font-size:11px;color:#888;">${r.contractValue?'$'+r.contractValue.toLocaleString():'—'}</td>
+function renderMonthly() {
+  const months = {};
+  DATA.forEach(d => {
+    if (d.days < 0 || !d.renewal) return;
+    const p = d.renewal.split('/');
+    if (p.length !== 3) return;
+    const key = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p[1]-1] + ' ' + p[2].slice(-2);
+    if (!months[key]) months[key] = {val:0,wt:0};
+    months[key].val += d.val;
+    months[key].wt  += wt(d);
+  });
+  const order = ['Jan 26','Feb 26','Mar 26','Apr 26','May 26','Jun 26','Jul 26','Aug 26','Sep 26','Oct 26','Nov 26','Dec 26','Jan 27','Feb 27','Mar 27'];
+  const rows = order.filter(k=>months[k]).map(k=>({month:k,...months[k]}));
+  if (!rows.length) { document.getElementById('monthly-bars').innerHTML='<div class="empty">No data</div>'; return; }
+  const maxVal = Math.max(...rows.map(r=>r.val));
+  document.getElementById('monthly-bars').innerHTML = rows.map(r=>`
+    <div class="bar-row">
+      <div class="bar-lbl">${r.month}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${Math.round(r.val/maxVal*100)}%;background:#60a5fa"></div>
+        <div class="bar-fill2" style="width:${Math.round(r.wt/maxVal*100)}%;background:#4ade80"></div>
+      </div>
+      <div class="bar-val">${r.val>=1000?'£'+(r.val/1000).toFixed(0)+'k':fmt(r.val)}</div>
+    </div>`).join('');
+}
+
+function renderHealth() {
+  document.getElementById('health-bars').innerHTML = '';
+  const total = DATA.reduce((a,d)=>a+d.val,0)||1;
+  [{h:'High',color:'#4ade80'},{h:'Medium',color:'#fbbf24'},{h:'Low',color:'#f87171'},{h:'Pending',color:'#3d3d3d'}]
+  .forEach(g => {
+    const items = DATA.filter(d=>d.health===g.h);
+    const val   = items.reduce((a,d)=>a+d.val,0);
+    const wtVal = items.reduce((a,d)=>a+wt(d),0);
+    const pct   = Math.round(val/total*100);
+    document.getElementById('health-bars').innerHTML += `
+      <div class="bar-row">
+        <div class="bar-lbl">${g.h} (${items.length})</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${g.color}"></div></div>
+        <div class="bar-val">${pct}% · ${fmt(wtVal)}</div>
+      </div>`;
+  });
+}
+
+function renderTable() {
+  const q  = document.getElementById('search').value.toLowerCase();
+  const fh = document.getElementById('fh').value;
+  const so = document.getElementById('so').value;
+  let rows = DATA.filter(d => {
+    if (q && !d.name.toLowerCase().includes(q)) return false;
+    if (fh && d.health !== fh) return false;
+    return true;
+  });
+  if (so==='days') rows.sort((a,b)=>a.days-b.days);
+  else if (so==='val') rows.sort((a,b)=>b.val-a.val);
+  else rows.sort((a,b)=>a.name.localeCompare(b.name));
+  document.getElementById('row-count').textContent = `${rows.length} contract${rows.length!==1?'s':''}`;
+  const dot = {High:'h-high',Medium:'h-med',Low:'h-low',Pending:'h-pend'};
+  document.getElementById('tbody').innerHTML = rows.length ? rows.map(d => {
+    const dCls = d.days<0?'days-past':d.days<=30?'days-crit':d.days<=90?'days-warn':'';
+    const dTxt = d.days<0?'past':d.days;
+    const wtVal = wt(d);
+    return `<tr>
+      <td title="${d.name}" style="font-weight:500">${d.name}</td>
+      <td class="mono">${fmtDate(d.end)}</td>
+      <td class="mono">${fmtDate(d.renewal)}</td>
+      <td class="mono ${dCls}">${dTxt}</td>
+      <td class="mono">${fmt(d.val)}</td>
+      <td class="mono">${wtVal>0?fmt(wtVal):'—'}</td>
+      <td><div class="health-cell"><span class="health-dot ${dot[d.health]??'h-pend'}"></span>${d.health}</div></td>
     </tr>`;
-  }).join('');
+  }).join('') : `<tr><td colspan="7" class="empty">No contracts match.</td></tr>`;
 }
 
-function populateSelects() {
-  const regions=[...new Set(raw.map(r=>r.region).filter(Boolean))].sort();
-  const csms=[...new Set(raw.map(r=>r.csm).filter(Boolean))].sort();
-  const rSel=document.getElementById('fRegion');
-  const cSel=document.getElementById('fCsm');
-  regions.forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;rSel.appendChild(o);});
-  csms.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cSel.appendChild(o);});
+async function doRefresh() {
+  const btn = document.getElementById('refreshBtn');
+  const err = document.getElementById('errorBanner');
+  btn.classList.add('spinning'); btn.disabled = true;
+  err.style.display = 'none';
+  try {
+    DATA = await loadData();
+    renderMetrics(); renderMonthly(); renderHealth(); renderTable();
+    const now = new Date();
+    document.getElementById('lastUpdated').textContent = 'Updated ' + now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('subtitle').textContent = `As of ${now.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} · Weighted: High=90% · Medium=75% · Low=40%`;
+  } catch(e) {
+    err.style.display = 'block';
+    err.textContent = '⚠ ' + e.message;
+    console.error(e);
+  }
+  setTimeout(()=>{ btn.classList.remove('spinning'); btn.disabled=false; }, 600);
 }
 
-['fHealth','fRegion','fCsm','fContact','fRenewal','fSearch'].forEach(id=>
-  document.getElementById(id).addEventListener('input', render)
-);
-populateSelects();
-render();
+window.addEventListener('DOMContentLoaded', async () => {
+  await doRefresh();
+  document.getElementById('loading').classList.add('hidden');
+});
 </script>
 </body>
 </html>
